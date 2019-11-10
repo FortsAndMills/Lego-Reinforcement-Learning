@@ -1,0 +1,12 @@
+TODO:
+- What about train-eval modes?
+- V(s_0) plotting
+- Visualize Q(s, a) for Q-learning
+- graphviz scheme visualisation?
+- personal env in each runner? Several runners test.
+- play test games each k-th frame and save animations to separate folder
+- in parallel environments, draw several reward lines?
+- alternative plots smoothing?
+- better interface for recording
+- q recording
+- bug (?): target network loading might happen before q_net loading
