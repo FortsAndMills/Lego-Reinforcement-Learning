@@ -9,4 +9,9 @@ TODO:
 - alternative plots smoothing?
 - better interface for recording
 - q recording
+- cateogircal Q does not work with multidimensional batch_shapes
+
+- optimization (?): vectorized work with SumTree
+
 - bug (?): target network loading might happen before q_net loading
+- bug: priorities are equal to loss. In DQN it is square root of loss.

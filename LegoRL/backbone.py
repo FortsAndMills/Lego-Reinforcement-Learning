@@ -8,8 +8,8 @@ head     - parameterized transformation from (feature_size) to (output_size), ty
 hat      - transforms (output_size) to desired representation (policy, Q-function, Categorical Q, etc.)
 
 feature_size is provided by user implicitly. 
-It is calculated using (input_shape) which can be given by modules, providing heads.
-Hat class provides (output_size), i.e. the dimension of output per element in the batch.
+It is calculated using (input_shape) which is be given by modules, providing heads.
+Hat class provides (required_shape), i.e. the dimension of output per element in the batch.
 
 Backbone class stores <full_network> field, containing all nn.Modules in nn.ModuleList,
 and provides each head with <net> field, containing (backbone, head, hat) in nn.Sequential.
@@ -23,19 +23,25 @@ Consider Twin DQN with shared replay buffer as an example why the cache is neede
 '''
 
 class Hat(nn.Module):
-    def required_shape(self):
-        '''
-        Returns desired shape of output per each object in the batch
-        output: int
-        '''
-        raise NotImplementedError
+    '''
+    Constructs a nn.Module that converts a tensor to Representation, where
+    Representation is a class for different representations of Q-functions or policies.
 
-    def extra_repr(self):
-        '''
-        Returns string description of this module for PyTorch nn.Module representation
-        output: str
-        '''
-        raise NotImplementedError
+    Representation must have class method required_shape(), returning int (number of output features)
+    and take Tensor as input to constructor.
+    '''
+    def __init__(self, Representation):
+        super().__init__()
+        self.Representation = Representation
+    
+    def required_shape(self):
+        return self.Representation.required_shape()
+
+    def forward(self, x):
+        return self.Representation(x)
+
+    def extra_repr(self):    
+        return 'output interpreted as ' + self.Representation.__name__
 
 class NetworkWithCache(nn.Module):
     '''
@@ -102,28 +108,40 @@ class Backbone(RLmodule):
     def backbone(self):
         return self.full_network[0]
 
-    def mount_head(self, head_name, input_shape, head_network, hat):
+    def mount_head(self, head_name, input_shape, headNetwork, representation):
         '''
         Checks if this backbone takes as input data of input_shape structure
         Then calculates feature_size of backbone output
         Constructs a head using head_network class with head as top
         input: head_name - name of head RLmodule, str
         input: input_shape - shape of backbone input data, tuple
-        input: head_network - nn.Module class
-        input: hat - nn.Module, inherited from Hat
+        input: headNetwork - nn.Module class
+        input: representation - class, acceptable by Hat
         output: _NetworkWithCache, consisting of backbone, head_network and head
         '''
         with torch.no_grad():
             feature_size = self.backbone(Tensor(2, *input_shape)).shape[1]
+        
+        hat = Hat(representation)
 
         print(f"Adding new head {head_name} to {self.name}:")
         print(f"  Input shape is {input_shape}")
         print(f"  Backbone feature size is {feature_size}")
         print(f"  Desired output is {hat.required_shape()}")            
-        
-        head = head_network(feature_size, hat.required_shape()).to(device)
+                
+        head = headNetwork(feature_size, hat.required_shape()).to(device)
         self.full_network.append(head)
         return NetworkWithCache(self.system, self.name, head_name, self.backbone, head, hat)
+
+    def has_noise(self):
+        '''
+        Returns true if this module has at least one Noisy layer.
+        output: bool
+        '''
+        for layer in self.full_network.modules():
+            if hasattr(layer, "magnitude"):
+                return True
+        return False
 
     def average_magnitude(self):
         '''

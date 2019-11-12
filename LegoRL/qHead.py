@@ -1,71 +1,92 @@
 from .backbone import *
-    
-class Q():
-    '''
-    FloatTensor representing Q-function, (*batch_shape x num_actions)
-    '''
-    def __init__(self, tensor):
-        self.tensor = tensor
 
-    def greedy(self):
+def Q(system): 
+    class Q():
         '''
-        Returns greedy action based on the output of net
-        output: LongTensor, (*batch_shape)
+        FloatTensor representing Q-function, (*batch_shape x num_actions)
         '''
-        return self.tensor.max(-1)[1]
+        def __init__(self, x):
+            assert x.shape[-1] == type(self).required_shape()
+            self.tensor = x
+
+        def required_shape():
+            '''
+            Returns number of elements that is expected as input
+            '''
+            return system.num_actions
+
+        def greedy(self):
+            '''
+            Returns greedy action based on the output of net
+            output: LongTensor, (*batch_shape)
+            '''
+            return self.tensor.max(-1)[1]
+            
+        def gather(self, action_b):
+            '''
+            Returns output of net for given batch of actions
+            input: action_b - LongTensor, (*batch_shape)
+            output: FloatTensor, (*batch_shape)
+            '''
+            return self.tensor.gather(-1, action_b.unsqueeze(-1)).squeeze(-1)
         
-    def gather(self, action_b):
-        '''
-        Returns output of net for given batch of actions
-        input: action_b - LongTensor, (*batch_shape)
-        output: FloatTensor, (*batch_shape)
-        '''
-        return self.tensor.gather(-1, action_b.unsqueeze(-1)).squeeze(-1)
-    
-    def value(self):
-        '''
-        Returns value of action, chosen greedy
-        output: FloatTensor, (*batch_shape)
-        '''
-        return self.tensor.max(-1)[0]
+        def value(self):
+            '''
+            Returns value of action, chosen greedy
+            output: FloatTensor, (*batch_shape)
+            '''
+            return self.tensor.max(-1)[0]
 
-class toQ(Hat):
-    def __init__(self, num_actions):
-        super().__init__()
-        self.num_actions = num_actions
+        def one_step_q(batch, next_v):
+            '''
+            Calculates one-step approximation using next_v as V*(s') estimation
+            input: Batch
+            input: next_v, (*batch_shape)
+            output: FloatTensor, (*batch_shape)
+            '''
+            # TODO: it does not work with these shapes!
+            return batch.reward + (system.gamma**batch.n_steps) * next_v * (1 - batch.done)
 
-    def required_shape(self):
-        return self.num_actions
+        def compare(q, target):
+            '''
+            Calculates loss using model prediction and given target ("guess")
+            input: q - current model output, FloatTensor, (*batch_shape)
+            input: target - FloatTensor, (*batch_shape)
+            output: FloatTensor, (*batch_shape)
+            '''
+            return (target - q).pow(2)
 
-    def forward(self, x):
-        assert x.shape[-1] == self.num_actions
-        return Q(x)
+        def __repr__(self):    
+            return 'Q-function for {} actions'.format(system.num_actions)
+    return Q
 
-    def extra_repr(self):    
-        return 'output interpreted as Q-function for {} actions'.format(self.num_actions)
-    
 class Q_head(RLmodule):
     """
     Provides a head for Q-function.
     
     Args:
         backbone - RLmodule for backbone with "mount_head"
-        HeadNetwork - nn.Module class for head
-        hat - Hat class to transform final output layer to desired shape
+        headNetwork - nn.Module class for head, which accepts (input_shape, output_shape) as
+                      constructor parameters
+        representation - Representation class to interpret final output layer
 
-    Provides: act
+    Provides: act, v, q
     """
-    def __init__(self, backbone, headNetwork=nn.Linear, hat=toQ, *args, **kwargs):
+    def __init__(self, backbone, headNetwork=nn.Linear, representation=Q, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.backbone = Reference(backbone)
         self.headNetwork = headNetwork
-        self.hat = hat
+        self.representation = representation
 
     def initialize(self):
         '''Initializes net'''
-        self.net = self.backbone.mount_head(self.name, self.system.observation_shape, 
-                                         self.headNetwork, self.hat(self.system.num_actions))
+        self.net = self.backbone.mount_head(
+                head_name = self.name, 
+                input_shape = self.system.observation_shape, 
+                headNetwork = self.headNetwork, 
+                representation = self.representation(self.system)
+        )
         
     def act(self, state):        
         '''
@@ -106,16 +127,6 @@ class Q_head(RLmodule):
         if for_next_state:
             return self.net(batch.next_state, storage=batch.next_state_storage)
         return self.net(batch.state, storage=batch.state_storage)
-
-    def one_step_q(self, batch, next_v):
-        '''
-        Calculates one-step approximation using next_v as V*(s') estimation
-        input: Batch
-        input: next_v, (*batch_shape, *value_shape)
-        output: FloatTensor, (*batch_shape, *value_shape)
-        '''
-        # TODO: it does not work with these shapes!
-        return batch.reward + (self.system.gamma**batch.n_steps) * next_v * (1 - batch.done)
     
     # WHAT TO DO NOW?
     # def get_priorities(self, batch):

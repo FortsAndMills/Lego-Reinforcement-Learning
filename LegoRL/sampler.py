@@ -6,7 +6,7 @@ class Sampler(RLmodule):
     Based on: https://arxiv.org/abs/1312.5602
     
     Args:
-        replay - RLmodule with "buffer", "__len__" and "nsteps" properties
+        replay - RLmodule with "buffer", "__len__" and "n_steps" properties
         batch_size - size of sampled batches, int
         cold_start - size of buffer before providing samples, int
 
@@ -29,18 +29,24 @@ class Sampler(RLmodule):
 
     def wait(self):
         self._sample = None
+
+    def generate_sample(self):
+        """
+        Samples a mini-batch.
+        """
+        self.debug("samples new batch uniformly.")
+        sample = zip(*random.sample(self.replay.buffer, self.batch_size))
+        self._sample = self.system.Batch(*sample, self.replay.n_steps)
     
     def iteration(self):
         """
-        Samples a mini-batch.
+        Checks if cold start condition is satisfied and samples a mini-batch.
         """
         if len(self.replay) < self.cold_start:
             self._sample = None
             self.debug("Cold Start regime: batch is not sampled.")
         else:
-            self.debug("samples new batch.")
-            sample = zip(*random.sample(self.replay.buffer, self.batch_size))
-            self._sample = self.system.Batch(*sample, self.replay.nsteps)
+            self.generate_sample()
 
     def __repr__(self):
         return f"Each {self.timer} iteration samples mini-batch from {self.replay.name}"

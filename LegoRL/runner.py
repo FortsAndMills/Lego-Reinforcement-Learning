@@ -49,7 +49,7 @@ class Runner(RLmodule):
         """
         Makes one step and logs results.
         """
-        self.debug("plays one step.", +1)
+        self.debug("plays one step.", open=True)
         start = time.time()
         results = self.step()
 
@@ -58,7 +58,7 @@ class Runner(RLmodule):
             self.episodes_done += 1
             self.log("rewards", res, "episode", "reward", self.episodes_done)
             self.log("episode ends", self.frames_done)
-        self.debug("", -1)
+        self.debug(close=True)
 
     def step(self):
         """

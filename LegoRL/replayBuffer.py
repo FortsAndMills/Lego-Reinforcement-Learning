@@ -9,13 +9,13 @@ class ReplayBuffer(RLmodule):
         runner - RLmodule with "observation" and "was_reset" properties
         capacity - size of buffer, int
 
-    Provides: buffer, __len__
+    Provides: buffer, buffer_pos, __len__, capacity
     """
     def __init__(self, runner, capacity=100000, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.runner = Reference(runner)
-        self.nsteps = 1
+        self.n_steps = None
         self.capacity = capacity
         
         self.buffer = []
@@ -25,7 +25,7 @@ class ReplayBuffer(RLmodule):
         """
         Remembers given transition.
         input: Transition
-        """        
+        """
         # preparing for concatenation into batch in future
         transition.state      = transition.state[None]
         transition.next_state = transition.next_state[None]
@@ -45,6 +45,12 @@ class ReplayBuffer(RLmodule):
         transitionBatch = self.runner.observation
         if transitionBatch is not None:
             self.debug("adds new observations from runner")
+
+            # updating n_steps of this replay buffer...
+            # TODO not very elegant
+            n_steps = transitionBatch.n_steps if hasattr(transitionBatch, "n_steps") else 1
+            self.n_steps = self.n_steps or n_steps
+            assert self.n_steps == n_steps, f"Replay with constant n={self.n_steps} witnessed transitions of length {n_step}"
             
             for transition in transitionBatch:
                 self.store_transition(transition)

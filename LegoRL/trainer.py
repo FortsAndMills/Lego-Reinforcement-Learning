@@ -23,6 +23,7 @@ class Trainer(RLmodule):
         self.clip_gradients = clip_gradients 
         self.optimizer = optimizer
         self.optimizer_args = optimizer_args
+        self.is_noised = None
 
     def init_optimizer(self):
         '''
@@ -30,6 +31,7 @@ class Trainer(RLmodule):
         to avoid initialization before the last head connects to backbone
         '''
         if not self.optimizer_initialized:
+            self.is_noised = self.backbone.has_noise()
             self.network = self.backbone.full_network
             self.optimizer_initialized = True
             self.optimizer = self.optimizer(self.network.parameters(), **self.optimizer_args)
@@ -43,17 +45,15 @@ class Trainer(RLmodule):
         
         # Loss collection. If some loss is None, then there is no data yet
         # and no optimization happens.
-        self.debug("starts loss calculation", +1)
         full_loss = 0
         for loss_provider in self.losses:
-            loss = loss_provider.loss()            
-            if loss is None:
-                self.debug("Loss is None; no optimization step is performed", -1)
+            if loss_provider.loss is None:
+                self.debug("loss is None; no optimization step is performed.")
                 return
 
-            full_loss += loss
+            full_loss += loss_provider.loss
 
-        self.debug("performs optimization step.", -1)
+        self.debug("performs optimization step.")
         self.optimizer.zero_grad()
         full_loss.backward()
         if self.clip_gradients is not None:
@@ -61,10 +61,10 @@ class Trainer(RLmodule):
         self.optimizer.step()
         
         if len(self.network) > 2:
-            self.system.log(self.name + " loss", full_loss.detach().cpu().numpy(), "training iteration", "loss")
+            self.system.log(self.backbone.name + " loss", full_loss.detach().cpu().numpy(), "training iteration", "loss")
         
-        # TODO: noisy layers
-        #self.log(self.name + "_magnitude", self.average_magnitude(), "magnitude logging iteration", "noise magnitude")
+        if self.is_noised and self.system.time_for_rare_logs():
+            self.log(self.backbone.name + " magnitude", self.backbone.average_magnitude(), "training iteration", "noise magnitude")
     
     def load(self, name):
         self.init_optimizer()

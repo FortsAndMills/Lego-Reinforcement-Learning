@@ -59,16 +59,20 @@ def Batch(ActionTensor):
             self.n_steps = n_steps
             self.state_storage = {}
             self.next_state_storage = {}
+            self.losses = {}
 
-        def average(self, loss_b):        
+        def average(self, name):        
             """
             Returns average (weighted if weights are provided) loss for batch of losses.
-            input: loss_b - Tensor, (*batch_shape)
+            input: name - name of loss to average, str
             """
+            loss_b = self.losses[name]
             assert loss_b.shape == self.reward.shape, "Error! Batch loss has wrong shape!"
+            
             if hasattr(self, "weights"):
                 assert loss_b.shape == self.weights.shape, "Error! Weights do not correspond to loss shape!"
                 return (loss_b * self.weights).sum()
+                
             return loss_b.mean()
             
         def __len__(self):

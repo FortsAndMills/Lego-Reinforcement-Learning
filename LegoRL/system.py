@@ -13,8 +13,9 @@ class System():
         gamma - discount factor, float from 0 to 1
         file_name - file name to save model, str or None
         save_timer - timer for saving models, int
+        rare_logs_timer - timer for computing expensive logs like average magnitude.
     """
-    def __init__(self, agent, env=None, make_env=None, threads=1, gamma=1, file_name=None, save_timer=1000):
+    def __init__(self, agent, env=None, make_env=None, threads=1, gamma=1, file_name=None, save_timer=1000, rare_logs_timer=50):
         # creating environment
         if env is not None:            
             # If environment given, create DummyVecEnv shell if needed:
@@ -55,6 +56,7 @@ class System():
         self.logger = defaultdict(list)
         self.logger_times = defaultdict(list)
         self.logger_labels = defaultdict(tuple)
+        self.time_for_rare_logs = lambda: self.iterations % rare_logs_timer == 0
 
         # saving
         self.file_name = file_name
@@ -84,17 +86,18 @@ class System():
         if x_axis is not None:
             self.logger_labels[key] = (x_axis, y_axis)
 
-    def debug(self, author, message, level=0):
+    def debug(self, author, message="", open=False, close=False):
         '''
         Prints debugging message if in debug regime
         input: author - name of message sender, str
         input: message - message to output
-        input: level - grow spacing if +1, close if -1.
+        input: open - grow spacing, bool
+        input: close - close previous spacing, bool
         '''
         if self.debug_on:
-            if level < 0: self.debug_level += level
+            if close: self.debug_level -= 1
             if message: print("  "*self.debug_level + author + ": " + message)
-            if level > 0: self.debug_level += level
+            if open: self.debug_level += 1
 
     def run(self, iterations=1, debug=False):
         """

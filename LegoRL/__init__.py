@@ -5,16 +5,17 @@ from .animations import *
 from .RLmodule import *
 from .composed import *
 from .system import *
-# from .network_modules import *
 
 from .runner import *
 from .visualizer import *
 
 from .replayBuffer import *
+from .nstepLatency import *
+
 from .sampler import *
-#from .nstepReplay import *
-#from .prioritizedReplay import *
-#from .replayBiasCorrection import *
+from .prioritizedSampler import *
+from .samplerBiasCorrection import *
+from .prioritiesUpdater import *
 # from .backwardBufferAgent import *
 
 from .backbone import *
@@ -22,6 +23,8 @@ from .trainer import *
 from .frozen import *
 
 from .qHead import *
+from .duelingQhead import *
+from .categoricalQhead import *
 
 from .DQN_loss import *
 #from .duelingDQN import *
@@ -31,6 +34,8 @@ from .DQN_loss import *
 # from .DDPG import *
 # from .twinDQN import *
 from .doubleDQN_loss import *
+
+from .noisy import *
 
 # from .A2C import *
 # from .TRPO import *
