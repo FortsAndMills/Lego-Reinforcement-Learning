@@ -2,12 +2,15 @@
 
 **Current plan:**
 - [x] Rainbow DQN
-- [ ] ActorCritic
+- [x] ActorCritic
+- [ ] Curiosity (inverse dynamics model + forward dynamics in filtered feature space)
 - [ ] PPO
 - [ ] Recurrent networks support
-- [ ] Curiosity (inverse dynamics model + forward dynamics in filtered feature space)
 
 **Optional:**
 - [ ] Quantile Regression
-- [ ] DDPG and support for continuous actions
+- [ ] Continuous actions support
+- [ ] DDPG, TD3, SAC
 - [ ] World models
+- [ ] Multi-reward support
+- [ ] Multi-gamma support
