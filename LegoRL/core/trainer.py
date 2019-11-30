@@ -69,7 +69,7 @@ class Trainer(RLmodule):
         self.optimizer.zero_grad()
         full_loss.backward()
         if self.clip_gradients is not None:
-            self.system.log(self.name + " gradient_norm", torch.nn.clip_grad_norm_(self.network.parameters(), self.clip_gradients), "training iteration", "gradient norm")
+            self.system.log(self.name + " gradient_norm", torch.nn.utils.clip_grad_norm_(self.network.parameters(), self.clip_gradients), "training iteration", "gradient norm")
         self.optimizer.step()
         
         if len(self.losses) > 1:
