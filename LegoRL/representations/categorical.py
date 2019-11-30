@@ -73,7 +73,8 @@ def Categorical(Vmin=-10, Vmax=10, num_atoms=51):
                 proj_dist.view(-1).index_add_(0, (l + offset).view(-1), (distributions * (u.float() + (b.ceil() == b).float() - b)).view(-1))
                 proj_dist.view(-1).index_add_(0, (u + offset).view(-1), (distributions * (b - l.float())).view(-1))
                 proj_dist /= proj_dist.sum(-1, keepdims=True)
-                
+
+                proj_dist = proj_dist.log()                
                 proj_dist = proj_dist.refine_names(*names).align_as(self.tensor)
                 return self.construct(proj_dist)
 
