@@ -84,7 +84,6 @@ def Categorical(Vmin=-10, Vmax=10, num_atoms=51):
                 input: target - CategoricalV
                 output: FloatTensor, (*batch_shape)
                 '''
-                # TODO doesn't torch have cross entropy? Taken from source code.
                 target_distribution = F.softmax(target.tensor, dim="atoms")
                 distribution = torch.clamp(F.softmax(self.tensor, dim="atoms"), 1e-8, 1 - 1e-8)
                 return -(target_distribution * distribution.log()).sum("atoms")
@@ -96,6 +95,9 @@ def Categorical(Vmin=-10, Vmax=10, num_atoms=51):
                 if policy is None:
                     return self.gather(self.greedy())
                 return super().value(policy)
+
+            def scalar(self):
+                return self._expectation().scalar()
 
             def __repr__(self):    
                 return super().__repr__() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)

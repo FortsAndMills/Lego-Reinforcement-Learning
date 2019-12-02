@@ -1,16 +1,36 @@
 TODO:
-- What about train-eval modes?
-- V(s_0) plotting
-- Visualize Q(s, a) for Q-learning
-- graphviz scheme visualisation?
-- Several runners tests.
-- play test games each k-th frame and save animations to separate folder
-- in parallel environments, draw several reward lines?
-- alternative plots smoothing?
-- check plotly plotting
+- [infra] V(s_0) plotting
+- [infra] A2C more plots
+- [infra] runner initialized issue; put message to logger
+- [bug] What about train-eval modes?
+- [infra] Visualize Q(s, a) for Q-learning. Text on replays? what is the reward after all?
+- [infra] Episode plots: Q spread, Monte-Carlo V, V.
+- [infra] check plotly plotting. Alternative plots smoothing? With dispersion, min and max?
+- [add]: inverse model
+- [tests] Mountain Car with inverse model
+- [add]: curiosity
+- [add]: GAE
+- [add]: PPO
+- [optimization]: test vectorized work with SumTree
+- [optimization]: how to store references to same states in ReplayBuffer? Do it in ints?
+- [add]: init?
+- [add]: multi-reward support
+- [add]: continuous actions support
+- [add]: OUNoise
+- [tests]: Pendulum-v0 
+- [add]: DDPG
+- [add]: recurrent network support
+- [add]: RND
+- [tests] Several runners tests.
+- [infra] graphviz scheme visualisation?
+- [infra] in parallel environments, draw several reward lines?
+- [add]: world model
+- [add]: multi-gamma support
+- [add]: TD3
+- [add]: SAC
+- [add]: CEM
 
-- optimization (?): vectorized work with SumTree
-- optimization: how to store references to same states in ReplayBuffer?
-
-- bug (?): target network loading might happen before q_net loading
+Bugs:
+- bug: target network loading might happen before q_net loading
 - bug: priorities are equal to loss. In DQN it is square root of loss.
+- bug: noisy linear does not work as an actor with deterministic envs.

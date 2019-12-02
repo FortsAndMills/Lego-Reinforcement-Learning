@@ -21,8 +21,8 @@ class ValueHead(CriticHead):
 
     def estimate(self, batch):
         '''
-        Estimates batch state-action pairs as r + V(s')
+        Estimates batch state-action pairs as V(s)
         input: Batch
         output: V
         '''
-        return self.V(batch, of="next state").one_step(batch)
+        return self.V(batch)

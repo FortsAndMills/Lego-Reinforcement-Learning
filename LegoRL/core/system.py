@@ -7,8 +7,6 @@ import pickle
 import time
 import gym
 import torch
-#import gym.spaces        # to avoid warnings
-#gym.logger.set_level(40) # to avoid warnings
 
 '''
 System class provides communication between all modules inside the agent.
@@ -63,6 +61,7 @@ class System():
         self.logger = defaultdict(list)
         self.logger_times = defaultdict(list)
         self.logger_labels = defaultdict(tuple)
+        self.reload_messages = []
         self.time_for_rare_logs = lambda: self.iterations % rare_logs_timer == 0
 
         # saving
@@ -92,6 +91,9 @@ class System():
         self.logger_times[key].append(x_value or self.iterations)
         if x_axis is not None:
             self.logger_labels[key] = (x_axis, y_axis)
+
+    def add_message(self, message):
+        self.reload_messages.append(f"iteration {self.iterations}: " + message) 
 
     def debug(self, author, message="", open=False, close=False):
         '''
@@ -134,7 +136,14 @@ class System():
             if self.file_name is not None and self.iterations % self.save_timer == 0:
                 self.save(self.file_name)
 
-        self.debug_on = False 
+        self.debug_on = False
+
+    def wallclock(self):
+        """
+        Returns time in seconds spent for training.
+        output: float
+        """
+        return sum(self.logger["time"])
     
     # saving and loading functions
     def save(self, name=None):
@@ -178,4 +187,4 @@ class System():
         # logging the fact that we were reloaded
         # it is important as, for example, replay buffers do not store their memory usually
         # so reloads reflect the learning procedure.
-        self.log("reloads iterations", self.iterations)
+        self.add_message("reloaded (replay buffers are lost)")

@@ -22,3 +22,7 @@ class Transition:
         yield self.reward
         yield self.next_state
         yield self.discount
+
+    def size(self):
+        import sys
+        return sum([sys.getsizeof(x) for x in self])

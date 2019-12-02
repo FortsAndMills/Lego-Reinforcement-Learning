@@ -1,10 +1,11 @@
 from LegoRL.core.RLmodule import RLmodule
 from LegoRL.core.composed import Reference
 
+import psutil
+
 class ReplayBuffer(RLmodule):
     """
     Replay Memory storing all transitions from runner.
-    Based on: https://arxiv.org/abs/1312.5602
     
     Args:
         runner - RLmodule with "new_transitions" and "was_reset" properties
@@ -33,6 +34,10 @@ class ReplayBuffer(RLmodule):
             self.buffer[self.buffer_pos] = transition
         
         self.buffer_pos = (self.buffer_pos + 1) % self.capacity
+        
+        # check if there is enough virtual memory
+        if len(self) == 1:
+            assert self.buffer[0].size() * self.capacity < psutil.virtual_memory().available
     
     def iteration(self):
         """
@@ -40,18 +45,15 @@ class ReplayBuffer(RLmodule):
         """   
         batch = self.runner.new_transitions()
         if batch is not None:
-            self.debug("adds new observations from runner")
-            
-            # TODO: only for n_steps = 1!!!
-            for transition in batch.transitions():
-            #     # if runner was not reset, we just store link to the same object as next_state for previous transition
-            #     # this should reduce memory consumption twice
-            #     if not self.runner.was_reset:
-            #         transition.state = self.buffer[self.buffer_pos - batch.batch_size].next_state
-                
+            self.debug("adds new observations from runner.")
+
+            # TODO: need some good idea how to share reference between next_state
+            # and state of following transitions coming from same rollout.
+            # Untrivial cause runner can be with latency.            
+            for transition in batch.transitions():                
                 self._store_transition(transition)
         else:
-            self.debug("no new observations found")
+            self.debug("no new observations found.")
         
     def __len__(self):
         return len(self.buffer)

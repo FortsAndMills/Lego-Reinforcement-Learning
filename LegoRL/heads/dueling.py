@@ -35,5 +35,4 @@ class Dueling(QualityHead):
         return a.add_v(v)
 
     def __repr__(self):
-        # TODO: ? where does V come from? 
-        return super().__repr__() + ' in dueling form (V + A - A.mean())'
+        return super().__repr__() + f' in dueling form (V + A - A.mean()) where V comes from <{self.value_head.name}>'

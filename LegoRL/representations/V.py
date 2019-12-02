@@ -71,5 +71,12 @@ class V(Representation):
         '''
         return self.construct(self.tensor + v.tensor.align_as(self.tensor))
 
+    def scalar(self):        
+        '''
+        Returns scalar version of this representation without additional dimensions.
+        output: FloatTensor, (*batch_shape)
+        '''
+        return self.tensor
+
     def __repr__(self):    
         return 'V-function'

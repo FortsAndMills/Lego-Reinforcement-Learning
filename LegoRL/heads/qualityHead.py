@@ -1,6 +1,5 @@
 from LegoRL.heads.criticHead import CriticHead
 from LegoRL.representations.Q import Q
-from LegoRL.representations.V import V
 
 import torch
 
@@ -8,20 +7,21 @@ class QualityHead(CriticHead):
     """
     Provides a head for Q-function.
 
-    Provides: act, V, Q, estimate
+    Provides: act, V, Q, estimate, advantage
     """        
-    def __init__(self, representation=Q(V), *args, **kwargs):
+    def __init__(self, representation=Q, *args, **kwargs):
+        assert "actions" in representation.names(), "Representation must contain Q-function"
         super().__init__(representation=representation, *args, **kwargs)
 
     def act(self, transitions):
-        self.debug("received act query.")
-
+        self.debug("received act query.", open=True)
         transitions.to_torch(self.system)
         
         with torch.no_grad():
             transitions.actions = self.Q(transitions).greedy()
 
         transitions.to_numpy()
+        self.debug(close=True)
 
     def V(self, batch, of="state", policy=None):
         '''
@@ -49,13 +49,3 @@ class QualityHead(CriticHead):
         output: V
         '''
         return self.Q(batch).gather(batch.actions)
-
-    #TODO: remove this?
-    def advantage(self, batch):
-        '''
-        Estimates A(s, a)
-        input: Batch
-        output: V
-        '''
-        q = self.Q(batch)
-        return q.gather(batch.actions).subtract_v(q.value())

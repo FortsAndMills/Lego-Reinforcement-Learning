@@ -22,9 +22,8 @@ class Interactor(RLmodule):
 
         self.policy = Reference(policy or self)
 
-        self._initialized = False
+        self._interrupted = False
         self._threads = threads
-
         self._was_reset = None
 
     @property
@@ -38,7 +37,9 @@ class Interactor(RLmodule):
                 if self._threads == 1:
                     self.env = DummyVecEnv([self.system.make_env()])
                 else:
+                    print(self.name + ": environment initialization...", end="")
                     self.env = SubprocVecEnv([self.system.make_env() for _ in range(self._threads)])
+                    print(" Finished.")
             except:
                 raise Exception("Error during environments creation. Try to run make_env() to find the bug!")
         elif self.system.env is not None:            
@@ -46,11 +47,21 @@ class Interactor(RLmodule):
             if isinstance(self.system.env, VecEnv):
                 self.env = self.system.env
             else:
-                # TODO: zeroed space error!
                 self.env = DummyVecEnv([lambda: self.system.env])
             self.system.env = None
         else:
             raise Exception("Runner can't create environment (the only instance is already taken?)")
+
+        self._reset()
+    
+    def _reset(self):
+        '''
+        Resets environment.
+        '''
+        self.ob = self.env.reset()
+        assert self.ob.max() > self.ob.min(), "BLANK STATE AFTER INIT ERROR"        
+        self.R = np.zeros((self.env.num_envs), dtype=np.float32)
+        self._interrupted = True
         
     def act(self, transitions):
         '''
@@ -65,14 +76,8 @@ class Interactor(RLmodule):
         output: transitions - Batch
         output: results - rewards of finished episodes, list of floats
         """
-        if not self._initialized:
-            self._was_reset = True
-            self.ob = self.env.reset()
-            assert self.ob.max() > self.ob.min(), "BLANK STATE AFTER INIT ERROR"        
-            self.R = np.zeros((self.env.num_envs), dtype=np.float32)
-            self._initialized = True
-        else:
-            self._was_reset = False        
+        self._was_reset = self._interrupted
+        self._interrupted = False        
         
         transitions = Batch(states=self.ob)
         self.policy.act(transitions)
@@ -80,7 +85,7 @@ class Interactor(RLmodule):
         try:
             self.ob, r, done, info = self.env.step(transitions.actions)
         except:
-            self.initialized = False
+            self._reset()
             raise Exception("Error during environment step. May be wrong action format? Last actions: {}".format(a))
         
         transitions.update(rewards=r, next_states=self.ob, discounts=self.system.gamma * (1 - done))
@@ -91,22 +96,26 @@ class Interactor(RLmodule):
         
         return transitions, results
 
-    def play(self, render=False):     
+    def play(self, render=False, store_frames=True):     
         """
         Plays full game until first done.        
         If env is vectorized, only first environment's game will be recorded.
         input: render - bool, whether to draw game inline (can be rendered in notebook)
+        input: store_frames - bool, whether to store rendered frames in rollout.
         output: Rollout
         """
-        self._initialized = False        
+        self._reset()
+
         self._rollout = Rollout()
-        self._rollout.frames = [self.env.render(mode = 'rgb_array')]
+        if store_frames:
+            self._rollout.frames = [self.env.render(mode = 'rgb_array')]
         
         for t in count():
             transitions, results = self.step()
             
-            self._rollout.append(transitions)            
-            self._rollout.frames.append(self.env.render(mode = 'rgb_array'))
+            self._rollout.append(transitions)
+            if store_frames:       
+                self._rollout.frames.append(self.env.render(mode = 'rgb_array'))
             
             if render:
                 import matplotlib.pyplot as plt
@@ -117,7 +126,10 @@ class Interactor(RLmodule):
                 plt.show()
             
             if self._rollout.discounts[-1][0] == 0:
-                break        
+                break
+        
+        self._interrupted = True
+               
         return self._rollout
 
     def __repr__(self):

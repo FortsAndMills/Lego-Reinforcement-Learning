@@ -86,9 +86,8 @@ class Batch(dict):
     def last_states(self):
         return self.next_states
 
-    # TODO: why is it classmtehod?
-    @classmethod
-    def names(cls):
+    @staticmethod
+    def names():
         return ("batch",)
 
     @property

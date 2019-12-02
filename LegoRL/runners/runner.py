@@ -28,7 +28,7 @@ class Runner(Interactor):
         Output: Batch
         """
         if self.performed:
-            self.debug("returns same transitions")
+            self.debug("returns same transitions.")
             return self._transitions
         self.performed = True
 
@@ -45,7 +45,6 @@ class Runner(Interactor):
             self.log("rewards", res, "episode", "reward", self.episodes_done)
             self.log("episode ends", self.frames_done)
             # TODO: log episode length
-            # TODO: fps
 
         self.debug(close=True)
 
@@ -53,6 +52,14 @@ class Runner(Interactor):
 
     def iteration(self):
         self.transitions()
+
+    @property
+    def fps(self):
+        """
+        Returns fps for this runner.
+        output: float
+        """
+        return self.frames_done / self.system.wallclock()
 
     def _write(self, f):
         pickle.dump(self.frames_done, f)
@@ -63,5 +70,4 @@ class Runner(Interactor):
         self.episodes_done = pickle.load(f)
 
     def __repr__(self):
-        # TODO: bring back {self.env.num_envs}
-        return f"Makes one step in parallel environments each {self.timer} iteration using <{self.policy.name}>"
+        return f"Makes one step in {self._threads} parallel environments each {self.timer} iteration using <{self.policy.name}>"

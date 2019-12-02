@@ -39,4 +39,4 @@ class PrioritiesUpdater(RLmodule):
         self.debug("priorities are updated", close=True)
 
     def __repr__(self):
-        return f"Each {self.timer} iteration updates priorities of <{self.sampler.name}> using priorities from <{self.priority_provider.name}>"
+        return f"Updates priorities of <{self.sampler.name}> using priorities from <{self.priority_provider.name}>"

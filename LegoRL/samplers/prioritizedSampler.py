@@ -128,4 +128,4 @@ class PrioritizedSampler(Sampler):
         self.max_priority = max(self.max_priority, new_batch_priorities.max())
         
     def __repr__(self):
-        return f"Each {self.timer} iteration samples mini-batch from <{self.replay.name}> using priorities"
+        return f"Samples mini-batch from <{self.replay.name}> using priorities"

@@ -10,15 +10,17 @@ class ActorLoss(Loss):
     Args:
         rollout - RLmodule with "sample" method
         policy - RLmodule with "distribution" method
-        critic - RLmodule with "advantage" method
+        target - RLmodule with "returns" method
+        baseline - RLmodule with "V" method
 
     Provides: loss, batch_loss
     """
-    def __init__(self, rollout, policy, advantage_provider, *args, **kwargs):
+    def __init__(self, rollout, policy, target, baseline, *args, **kwargs):
         super().__init__(sampler=rollout, *args, **kwargs)
         
         self.policy = Reference(policy)
-        self.advantage_provider = Reference(advantage_provider)
+        self.target = Reference(target)
+        self.baseline = Reference(baseline)
 
     @batch_cached("loss")
     def batch_loss(self, rollout):
@@ -28,9 +30,9 @@ class ActorLoss(Loss):
         input: rollout - Rollout
         output: Tensor, (*batch_shape)
         '''
-        advantages = self.advantage_provider.advantage(rollout)
+        advantages = self.target.returns(rollout).subtract_v(self.baseline.V(rollout))
         log_probs = self.policy.distribution(rollout).log_prob(rollout.actions.rename(None))
-        return -log_probs * advantages.tensor.detach()    # TODO: getattr for V to work with tensor?
+        return -log_probs * advantages.scalar().detach()
         
     def __repr__(self):
-        return f"Calculates gradient estimation for <{self.policy.name}> using advantages from <{self.advantage_provider.name}> and rollouts from <{self.sampler.name}>"
+        return f"Calculates gradient estimation for <{self.policy.name}> using returns from <{self.target.name}>, baseline from <{self.baseline.name}> and rollouts from <{self.sampler.name}>"

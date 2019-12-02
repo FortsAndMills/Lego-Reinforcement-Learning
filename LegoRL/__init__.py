@@ -8,5 +8,6 @@ from .buffers import *
 from .samplers import *
 from .heads import *
 from .representations import *
+from .targets import *
 from .losses import *
 from .exploration import *

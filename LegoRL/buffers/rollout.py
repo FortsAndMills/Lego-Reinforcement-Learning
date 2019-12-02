@@ -20,14 +20,15 @@ class Rollout(Batch):
         It is assumed that states of added batch are exactly equal to the last states.
         input: Batch
         '''
+        # initializing rollout
         if "observations" not in self:
             self.observations = [batch.states]
             for key, item in batch.items():
                 if key != "states" and key != "next_states":
                     self[key] = []
 
+        # adding new transitions
         self.observations.append(batch.next_states)
-
         for key, item in batch.items():
             if key != "states" and key != "next_states":
                 self[key].append(item)
@@ -45,6 +46,7 @@ class Rollout(Batch):
     def to_torch(self, system):
         super().to_torch(system)       
 
+        # concatenates all tensors in additional information along time axis
         for key in self:
             if key not in ["observations", "states", "actions", "rewards", "next_states", "discounts"]:
                 if isinstance(self[key][0], Representation):
@@ -66,14 +68,16 @@ class Rollout(Batch):
 
     @property
     def rollout_length(self):
-        return len(self.observations) - 1
+        if "observations" in self:
+            return len(self.observations) - 1
+        return 0
 
     @property
     def batch_size(self):
         return self.observations[0].shape[0]
 
-    @classmethod
-    def names(cls):
+    @staticmethod
+    def names():
         return ("timesteps", "batch",)
     
     @property

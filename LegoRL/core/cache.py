@@ -22,13 +22,16 @@ def cached(forward):
 
         storage = kwargs.get("storage", None)
         cache_name = kwargs.get("cache_name", None)
-        key = self.name if cache_name is None else self.name + " output for " + cache_name 
+        
+        key = self.name if cache_name is None else self.name + " output for " + cache_name
+
         if storage is not None and key in storage:
             self.system.debug(self.name, f"reused {'' if cache_name is None else 'output for ' + cache_name} from cache!")
             return storage[key]
             
         output = forward(self, *input, **kwargs)
-        self.system.debug(self.name, f"forward pass {'' if cache_name is None else 'for ' + cache_name} computed")
+        
+        self.system.debug(self.name, f"forward pass {'' if cache_name is None else 'for ' + cache_name} computed.")
         if storage is not None:
             storage[key] = output
         return output
@@ -40,10 +43,10 @@ def batch_cached(name):
         def cached_function(self, batch):
             key = self.name + " " + name
             if key in batch:
-                self.debug(f"{name} for the batch has already been calculated, used from cache")
+                self.debug(f"{name} for the batch has already been calculated, used from cache!")
                 return batch[key]       
 
-            batch[key] = f(self, batch)    
+            batch[key] = f(self, batch)
             return batch[key]
         return cached_function
     return batch_cached

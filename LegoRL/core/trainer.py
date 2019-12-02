@@ -64,16 +64,20 @@ class Trainer(RLmodule):
 
             self.log(loss_provider.name, weight * loss.detach().cpu().numpy(), "training iteration", "loss")
 
-        # performing optimization step and logging.
+        # performing optimization step.
         self.debug("performs optimization step.", close=True)
         self.optimizer.zero_grad()
         full_loss.backward()
         if self.clip_gradients is not None:
-            self.system.log(self.name + " gradient_norm", torch.nn.utils.clip_grad_norm_(self.network.parameters(), self.clip_gradients), "training iteration", "gradient norm")
+            g = torch.nn.utils.clip_grad_norm_(self.network.parameters(), self.clip_gradients)
         self.optimizer.step()
         
+        # additional logs.
+        if self.clip_gradients is not None:
+            self.log(self.name + " gradient_norm", g, "training iteration", "gradient norm")
+
         if len(self.losses) > 1:
-            self.system.log(self.backbone.name + " loss", full_loss.detach().cpu().numpy(), "training iteration", "loss")
+            self.log(self.backbone.name + " loss", full_loss.detach().cpu().numpy(), "training iteration", "loss")
         
         if self._is_noised and self.system.time_for_rare_logs():
             self.log(self.backbone.name + " magnitude", self.backbone.average_magnitude(), "training iteration", "noise magnitude")

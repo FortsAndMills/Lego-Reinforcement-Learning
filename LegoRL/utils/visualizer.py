@@ -4,6 +4,17 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
 import numpy as np
+from scipy.signal import convolve, gaussian
+
+def smoothen(values, window_size):
+    kernel = gaussian(window_size, std=window_size)
+    kernel = kernel / np.sum(kernel)
+    return convolve(values, kernel, 'valid')
+
+def sliding_average(a, window_size):
+    """one-liner for sliding average for array a with window size window_size"""
+    return np.convolve(np.concatenate([np.ones((window_size - 1)) * a[0], a]), np.ones((window_size))/window_size, mode='valid')
+
 
 class Visualizer(RLmodule):
     """
@@ -20,10 +31,6 @@ class Visualizer(RLmodule):
 
         self.reward_smoothing = reward_smoothing
         self.points_limit = points_limit
-
-    def _sliding_average(self, a, window_size):
-        """one-liner for sliding average for array a with window size window_size"""
-        return np.convolve(np.concatenate([np.ones((window_size - 1)) * a[0], a]), np.ones((window_size))/window_size, mode='valid')
 
     def visualize(self):
         """
@@ -67,7 +74,7 @@ class Visualizer(RLmodule):
                 
                 # smoothing main plot!
                 if key == "rewards" and self.reward_smoothing is not None:
-                    ax.plot(self.system.logger_times[key][::k], self._sliding_average(value, self.reward_smoothing)[::k], label="smoothed rewards")
+                    ax.plot(self.system.logger_times[key][::k], sliding_average(value, self.reward_smoothing)[::k], label="smoothed rewards")
         plt.show()
 
     def __repr__(self):

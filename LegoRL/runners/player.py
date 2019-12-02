@@ -12,12 +12,12 @@ class Player(Interactor):
 
         self._rollout = None
 
-    def iteration(self):
+    def visualize(self):
         """
         Makes one step and logs results.
         """
-        rollout = self.play()
-        self.log("evaluation rewards", sum(rollout.rewards)[0], "evaluation stages", "reward")
+        rollout = self.play(render=False, store_frames=False)
+        self.log(self.name + " evaluation", sum(rollout.rewards)[0], "evaluation stages", "reward")
 
     def rollout(self):
         """
@@ -29,7 +29,7 @@ class Player(Interactor):
             return self._rollout
         self.performed = True
 
-        self.play()
+        self.play(render=False, store_frames=False)
         return self._rollout
 
     def __repr__(self):

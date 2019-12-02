@@ -79,6 +79,7 @@ class Reference():
             return self.ref.__repr__()
         return f"Reference at RLmodule named {self.ref}. It will be changed to direct link after system initialization"
 
+
 class ReferenceList(list):
     '''
     Auxiliary class to store list of references

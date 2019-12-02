@@ -43,4 +43,3 @@ def NoisyLinear(std_init=0.4):
             # returns summed magnitudes of noise and number of noisy parameters
             return (self.sigma_weight.abs().sum() + self.sigma_bias.abs().sum()).detach().cpu().numpy(), self.n_params
     return NoisyLinear
-    

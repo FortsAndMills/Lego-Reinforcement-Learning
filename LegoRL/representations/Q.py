@@ -2,7 +2,7 @@ from LegoRL.representations.V import V
 
 import torch
 
-def Q(parclass):
+def StateActionV(parclass):
     class Quality(parclass):
         """
         State-action value function (Quality function, Q-function) representation.
@@ -20,7 +20,7 @@ def Q(parclass):
         @classmethod
         def constructor(cls):
             dims = super().constructor()
-            dims["actions"] = Q
+            dims["actions"] = StateActionV
             return dims
 
         def greedy(self):
@@ -61,3 +61,5 @@ def Q(parclass):
         def __repr__(self):    
             return f'Q-function for {self.system.num_actions} actions'
     return Quality
+
+Q = StateActionV(V)

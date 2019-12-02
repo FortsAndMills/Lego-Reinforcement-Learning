@@ -28,28 +28,30 @@ class RolloutCollector(RLmodule):
         output: Batch
         """
         if self.performed:
-            self.debug("returns same sample")
+            self.debug("returns same sample.")
             return self._sample
         self.performed = True
 
         transitions = self.runner.transitions()
         if transitions is None:
-            self.debug("no new observations found, resetting rollout")
+            self.debug("no new observations found, resetting rollout.")
             self._sample = None
             self._rollout = Rollout()
             return self._sample
 
         if self.runner.was_reset:
             self._rollout = Rollout()
-            self.debug("resets because runner was reset")                
+            self.debug("resets because runner was reset.")                
         
         self._rollout.append(transitions)
         
         assert self._rollout.rollout_length <= self.rollout_length        
         if self._rollout.rollout_length == self.rollout_length:
+            self.debug("rollout generated!")
             self._sample = self._rollout.to_torch(self.system)
             self._rollout = Rollout()
         else:
+            self.debug("not enough transitions collected.")
             self._sample = None
 
         return self._sample
