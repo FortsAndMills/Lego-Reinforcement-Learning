@@ -1,6 +1,7 @@
 from LegoRL.core.RLmodule import RLmodule
+from LegoRL.buffers.batch import Batch
 
-from LegoRL.utils.multiprocessing_env import DummyVecEnv
+from LegoRL.utils.multiprocessing_env import VecEnv, DummyVecEnv
 from collections import defaultdict
 
 import pickle
@@ -27,13 +28,22 @@ class System():
         save_timer - timer for saving models, int
         rare_logs_timer - timer for computing expensive logs like average magnitude.
     """
-    def __init__(self, agent, env=None, make_env=None, gamma=1, file_name=None, save_timer=1000, rare_logs_timer=50):
+    def __init__(self, agent, env=None, make_env=None, gamma=1, file_name=None, save_timer=1000, rare_logs_timer=100):
         # creating environment creation function for runners.
         if env is None and make_env is None: 
             raise Exception("Environment env or function make_env must be provided")
         
-        self.env = env or DummyVecEnv([make_env()])
+        self.env = None
         self.make_env = make_env
+
+        # If environment is given explicitly, create DummyVecEnv shell if needed:
+        if env is not None:
+            if isinstance(env, VecEnv):
+                self.env = env
+            else:
+                self.env = DummyVecEnv([lambda: env])
+        else:
+            self.env = DummyVecEnv([make_env()])
 
         # useful constants
         self.USE_CUDA = torch.cuda.is_available()
@@ -54,7 +64,8 @@ class System():
             self.action_shape = self.env.action_space.shape
             self.ActionTensor = self.FloatTensor
         else:
-            raise Exception("Error: this action space is not supported!")   
+            raise Exception("Error: this action space is not supported!")
+        self.initial_state_example = Batch(states=self.env.reset()).to_torch(self)
 
         # logging
         self.iterations = 0
@@ -158,6 +169,7 @@ class System():
         pickle.dump(self.logger_times, f)
         pickle.dump(self.logger_labels, f)
         pickle.dump(self.iterations, f)
+        pickle.dump(self.reload_messages, f)
 
         # agent can also write something to this file
         self.agent._write(f)
@@ -178,6 +190,7 @@ class System():
         self.logger_times = pickle.load(f)
         self.logger_labels = pickle.load(f)
         self.iterations = pickle.load(f)
+        self.reload_messages = pickle.load(f)
         self.agent._read(f)
         f.close()
 

@@ -108,7 +108,6 @@ class Composed(RLmodule):
     """
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.iterations = 0
 
         # storing all modules inside this container
         self.modules = dict()
@@ -171,15 +170,17 @@ class Composed(RLmodule):
         """
         Calls each module's iteration method if it is not frozen and it is time
         """
-        self.iterations += 1        
         for module in self.modules.values():
             module.performed = False
-            if not module.frozen and self.iterations % module.timer == 0:
+            if not module.frozen and self.system.iterations % module.timer == 0:
                 module.iteration()
 
     def visualize(self):
+        """
+        Calls each module's visualize method if it is not frozen and it is time
+        """
         for module in self.modules.values():
-            if not module.frozen and self.iterations % module.timer == 0:
+            if not module.frozen and self.system.iterations % module.timer == 0:
                 module.visualize()        
     
     def _write(self, f):

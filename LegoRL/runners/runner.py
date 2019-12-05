@@ -35,16 +35,16 @@ class Runner(Interactor):
         self.debug("plays one step.", open=True)
 
         start = time.time()
-        self._transitions, results = self.step()
+        self._transitions, results, lengths = self.step()
         self.log("playing time", time.time() - start, "training iteration", "seconds")
         
         self.frames_done += self.env.num_envs
-        for res in results:
+        for res, leng in zip(results, lengths):
             self.episodes_done += 1
 
             self.log("rewards", res, "episode", "reward", self.episodes_done)
+            self.log("lengths", leng, "episode", "length", self.episodes_done)
             self.log("episode ends", self.frames_done)
-            # TODO: log episode length
 
         self.debug(close=True)
 

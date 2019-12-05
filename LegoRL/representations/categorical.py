@@ -92,6 +92,8 @@ def Categorical(Vmin=-10, Vmax=10, num_atoms=51):
                 return self._expectation().greedy()
                 
             def value(self, policy=None):
+                if "actions" not in self.names():
+                    return self
                 if policy is None:
                     return self.gather(self.greedy())
                 return super().value(policy)

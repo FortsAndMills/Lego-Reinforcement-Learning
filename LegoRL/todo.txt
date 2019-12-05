@@ -1,7 +1,4 @@
 TODO:
-- [infra] V(s_0) plotting
-- [infra] A2C more plots
-- [infra] runner initialized issue; put message to logger
 - [bug] What about train-eval modes?
 - [infra] Visualize Q(s, a) for Q-learning. Text on replays? what is the reward after all?
 - [infra] Episode plots: Q spread, Monte-Carlo V, V.

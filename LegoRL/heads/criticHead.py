@@ -27,4 +27,12 @@ class CriticHead(Head):
         if of == "next state":
             return torch.cat(first_states[1:], last_state[None], dim=0)
         
-        return first_states
+        return first_states    
+
+    def visualize(self):
+        '''
+        Stores value of initial state.
+        '''
+        if self.system.time_for_rare_logs():
+            v0 = self(self.system.initial_state_example.states).value().scalar().detach().item()
+            self.log(self.name + " initial state value", v0, "iterations", "$V(s_0)$")

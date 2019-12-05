@@ -40,7 +40,7 @@ class Representation():
     @classmethod
     def stack(cls, representations):
         '''
-        Stacks representations, adding new dimension of batch_shape.
+        Stacks representations, adding new dimension "timesteps".
         input: representations - list of Representation
         output: Representation
         '''

@@ -43,13 +43,13 @@ class Sampler(RLmodule):
         output: Batch
         """
         if self.performed:
-            self.debug("returns same sample")
+            self.debug("returns same sample.")
             return self._sample
         self.performed = True
 
         if len(self.replay) < self.cold_start:
             self._sample = None
-            self.debug("Cold Start regime: batch is not sampled.")
+            self.debug("cold start regime: batch is not sampled.")
         else:
             return self._generate_sample()
 

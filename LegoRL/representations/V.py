@@ -78,5 +78,8 @@ class V(Representation):
         '''
         return self.tensor
 
+    def value(self):
+        return self
+
     def __repr__(self):    
         return 'V-function'

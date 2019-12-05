@@ -5,7 +5,7 @@ from LegoRL.buffers.rollout import Rollout
 
 import numpy as np
 from itertools import count
-from LegoRL.utils.multiprocessing_env import VecEnv, DummyVecEnv, SubprocVecEnv
+from LegoRL.utils.multiprocessing_env import DummyVecEnv, SubprocVecEnv
 
 class Interactor(RLmodule):
     """
@@ -42,12 +42,8 @@ class Interactor(RLmodule):
                     print(" Finished.")
             except:
                 raise Exception("Error during environments creation. Try to run make_env() to find the bug!")
-        elif self.system.env is not None:            
-            # If environment given, create DummyVecEnv shell if needed:
-            if isinstance(self.system.env, VecEnv):
-                self.env = self.system.env
-            else:
-                self.env = DummyVecEnv([lambda: self.system.env])
+        elif self.system.env is not None:
+            self.env = self.system.env
             self.system.env = None
         else:
             raise Exception("Runner can't create environment (the only instance is already taken?)")
@@ -58,10 +54,13 @@ class Interactor(RLmodule):
         '''
         Resets environment.
         '''
+        self._interrupted = True
+        
         self.ob = self.env.reset()
         assert self.ob.max() > self.ob.min(), "BLANK STATE AFTER INIT ERROR"        
+        
         self.R = np.zeros((self.env.num_envs), dtype=np.float32)
-        self._interrupted = True
+        self.T = np.zeros((self.env.num_envs), dtype=np.float32)
         
     def act(self, transitions):
         '''
@@ -75,6 +74,7 @@ class Interactor(RLmodule):
         Plays one step in parallel environment and updates "observation" property.
         output: transitions - Batch
         output: results - rewards of finished episodes, list of floats
+        output: lengths - lengths of finished episodes, list of ints
         """
         self._was_reset = self._interrupted
         self._interrupted = False        
@@ -91,10 +91,13 @@ class Interactor(RLmodule):
         transitions.update(rewards=r, next_states=self.ob, discounts=self.system.gamma * (1 - done))
                 
         self.R += r
+        self.T += 1
         results = self.R[done]
+        lengths = self.T[done]
         self.R[done] = 0
+        self.T[done] = 0
         
-        return transitions, results
+        return transitions, results, lengths
 
     def play(self, render=False, store_frames=True):     
         """
@@ -108,14 +111,14 @@ class Interactor(RLmodule):
 
         self._rollout = Rollout()
         if store_frames:
-            self._rollout.frames = [self.env.render(mode = 'rgb_array')]
+            self._rollout.frames = [np.copy(self.env.render(mode = 'rgb_array'))]
         
         for t in count():
-            transitions, results = self.step()
+            transitions, _, _ = self.step()
             
             self._rollout.append(transitions)
             if store_frames:       
-                self._rollout.frames.append(self.env.render(mode = 'rgb_array'))
+                self._rollout.frames.append(np.copy(self.env.render(mode = 'rgb_array')))
             
             if render:
                 import matplotlib.pyplot as plt
