@@ -1,26 +1,29 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
-
-import psutil
+from LegoRL.core.reference import Reference
 
 class ReplayBuffer(RLmodule):
     """
     Replay Memory storing all transitions from runner.
     
     Args:
-        runner - RLmodule with "new_transitions" and "was_reset" properties
+        runner - RLmodule with "new_transitions", "was_reset" properties
         capacity - size of buffer, int
 
-    Provides: buffer, buffer_pos, __len__, capacity
+    Provides:
+        buffer - list of Transition
+        buffer_pos - int
+        __len__ - function, returns size of buffer
+        capacity - int
     """
-    def __init__(self, runner, capacity=10000, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, runner, capacity=10000, frozen=False):
+        super().__init__(frozen=frozen)
 
         self.runner = Reference(runner)
         self.capacity = capacity
         
         self.buffer = []
         self.buffer_pos = 0
+        self._last_seen_id = None
     
     def _store_transition(self, transition):
         """
@@ -35,22 +38,23 @@ class ReplayBuffer(RLmodule):
         
         self.buffer_pos = (self.buffer_pos + 1) % self.capacity
         
-        # check if there is enough virtual memory
-        if len(self) == 1:
-            assert self.buffer[0].size() * self.capacity < psutil.virtual_memory().available
-    
     def iteration(self):
         """
-        Collects observations from runner.
+        Collects new observations from runner.
         """   
-        batch = self.runner.new_transitions()
-        if batch is not None:
+        storage = self.runner.sample()
+        if storage is not None:
             self.debug("adds new observations from runner.")
 
-            # TODO: need some good idea how to share reference between next_state
-            # and state of following transitions coming from same rollout.
-            # Untrivial cause runner can be with latency.            
-            for transition in batch.transitions():                
+            for transition in storage.transitions():
+                # saving memory by not storing same state twice
+                # we can do that if storage's id is following previous id
+                if ((not hasattr(storage, "n_steps") or storage.n_steps == 1) and
+                    storage.id - 1 == self._last_seen_id):
+                    transition.state = self.buffer[self.buffer_pos - len(storage)].next_state
+                self._last_seen_id = storage.id
+
+                # storing transition                
                 self._store_transition(transition)
         else:
             self.debug("no new observations found.")

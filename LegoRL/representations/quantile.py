@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-def Quantile(num_atoms=51):
+def Quantile(parclass, num_atoms=51):
     """
     Quantile value functions.
     Adds new dimension to representation tensor with num_atoms elements.
@@ -11,60 +11,57 @@ def Quantile(num_atoms=51):
     Args:
         num_atoms - number of atoms in approximation distribution, int
     """
+    tau = torch.tensor((2 * np.arange(num_atoms) + 1) / (2.0 * num_atoms), names=("atoms",))
 
-    def Quantile(parclass):
-        class QuantileValue(parclass):
-            @classmethod
-            def shape(cls, system):
-                return torch.Size((num_atoms,)) + super().shape(system)
-        
-            @classmethod
-            def names(cls):
-                return ("atoms",) + super().names()
+    class QuantileValue(parclass):
+        def expectation(self):
+            '''
+            Reduces atoms dimension by computing expectation.
+            output: V (atoms dimension reduced)
+            '''
+            return self.construct(self.tensor.sum(dim="atoms") / num_atoms)
 
-            @classmethod
-            def constructor(cls):
-                dims = super().constructor()
-                dims["atoms"] = Quantile
-                return dims
+        def compare(self, target):
+            '''
+            Calculates Wasserstein distance between target and this Quantile value.
+            input: target - V, same dimensions as this
+            output: Loss
+            '''
+            target = target.tensor.unflatten('atoms', [('atoms', 1),         ('atomsII', num_atoms)])
+            q      =   self.tensor.unflatten('atoms', [('atoms', num_atoms), ('atomsII', 1)])
+            
+            diff = target - q 
+            cmp = diff * (tau.to(diff.device).align_as(diff) - (diff < 0).float())        
+            
+            # mean should be taken across "atomsII" dimension.
+            # NamedTensors mean issue...
+            return self.mdp["Loss"](cmp.sum('atomsII').sum('atoms') / num_atoms)
 
-            def _expectation(self):
-                '''
-                Reduces atoms dimension.
-                output: V without atoms dimension
-                '''
-                return self.construct(self.tensor.sum(dim="atoms") / num_atoms)
+        def greedy(self):
+            return self.expectation().greedy()
+            
+        def value(self, policy=None):
+            if policy is None:
+                return self.gather(self.greedy())
+            return super().value(policy)
 
-            def compare(self, target):
-                '''
-                Calculates Wasserstein distance between target and this Quantile value.
-                input: target - QuantileV
-                output: FloatTensor, (*batch_shape)
-                '''
-                target = target.tensor.unflatten('atoms', [('atoms', 1),         ('atomsII', num_atoms)])
-                q      =   self.tensor.unflatten('atoms', [('atoms', num_atoms), ('atomsII', 1)])
-                diff = target - q
+        def scalar(self):
+            return self.expectation().scalar()
 
-                tau = self.system.FloatTensor((2 * np.arange(num_atoms) + 1) / (2.0 * num_atoms), names=("atoms",)).align_as(diff)
-                
-                # mean should be taken across "atomsII" dimension.
-                # NamedTensors mean issue...
-                return (diff * (tau - (diff < 0).float())).sum('atomsII').sum('atoms') / num_atoms
+        @classmethod
+        def rshape(cls):
+            return torch.Size((num_atoms,)) + super().rshape()
+    
+        @classmethod
+        def rnames(cls):
+            return ("atoms",) + super().rnames()
 
-            def greedy(self):
-                return self._expectation().greedy()
-                
-            def value(self, policy=None):
-                if "actions" not in self.names():
-                    return self
-                if policy is None:
-                    return self.gather(self.greedy())
-                return super().value(policy)
+        @classmethod
+        def constructor(cls):
+            dims = super().constructor()
+            dims["atoms"] = lambda parclass: Quantile(parclass, num_atoms)
+            return dims
 
-            def scalar(self):
-                return self._expectation().scalar()
-
-            def __repr__(self):    
-                return super().__repr__() + f' in quantile form with {num_atoms} atoms'
-        return QuantileValue
-    return Quantile
+        def __repr__(self):    
+            return super().__repr__() + f' in quantile form with {num_atoms} atoms'
+    return QuantileValue

@@ -1,6 +1,6 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
-from LegoRL.buffers.batch import Batch
+from LegoRL.core.reference import Reference
+from LegoRL.buffers.storage import Storage
 
 import random
 
@@ -16,8 +16,8 @@ class Sampler(RLmodule):
 
     Provides: sample
     """
-    def __init__(self, replay, batch_size=32, cold_start=100, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, replay, batch_size=32, cold_start=100, timer=1, frozen=False):
+        super().__init__(timer=timer, frozen=frozen)
 
         assert cold_start >= batch_size, "Batch size must be smaller than cold_start!"        
 
@@ -30,22 +30,22 @@ class Sampler(RLmodule):
     def _generate_sample(self):
         """
         Generates a new mini-batch into self._sample.
-        output: Batch
+        output: Storage
         """
         self.debug("samples new batch uniformly.")
         transitions = random.sample(self.replay.buffer, self.batch_size)
-        self._sample = Batch.from_list(transitions).to_torch(self.system)
+        self._sample = self.mdp[Storage].from_list(transitions)
         return self._sample
 
     def sample(self):
         """
         Checks if cold start condition is satisfied and samples a mini-batch.
-        output: Batch
+        output: Storage
         """
-        if self.performed:
+        if self._performed:
             self.debug("returns same sample.")
             return self._sample
-        self.performed = True
+        self._performed = True
 
         if len(self.replay) < self.cold_start:
             self._sample = None

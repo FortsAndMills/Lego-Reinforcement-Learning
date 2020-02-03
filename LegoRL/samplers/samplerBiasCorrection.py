@@ -1,5 +1,5 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
+from LegoRL.core.reference import Reference
 
 import numpy as np
 from copy import copy
@@ -28,12 +28,12 @@ class SamplerBiasCorrection(RLmodule):
     def sample(self):
         '''
         Returns a sample of batches.
-        output: Batch
+        output: Storage
         '''
-        if self.performed:
+        if self._performed:
             self.debug("returns same sample")
             return self._sample
-        self.performed = True
+        self._performed = True
         
         original_sample = self.sampler.sample()
         if original_sample is None:
@@ -57,11 +57,12 @@ class SamplerBiasCorrection(RLmodule):
         # these weights are normalized as proposed in the original article to make loss function scale more stable.
         weights /= self._sample.priorities.min() ** (-self.rp_beta())
 
-        self.log("median weight", np.median(weights), "training iteration", "weights")
-        self.log("mean weight", np.mean(weights), "training iteration", "weights")
-    
-        self._sample.weights = self.system.FloatTensor(weights)
+        # logs
+        self.log("median weight", np.median(weights), "weights")
+        self.log("mean weight", np.mean(weights), "weights")
         self.debug("weights added to sampled batch")
+        
+        self._sample.weights = self.mdp["Weights"](weights)
         return self._sample
 
     def __repr__(self):

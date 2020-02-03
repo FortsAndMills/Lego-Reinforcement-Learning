@@ -1,6 +1,6 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
-from LegoRL.core.cache import batch_cached
+from LegoRL.core.reference import Reference
+from LegoRL.core.cache import storage_cached
 
 class Loss(RLmodule):
     """
@@ -11,15 +11,15 @@ class Loss(RLmodule):
     
     Provides: loss, batch_loss
     """
-    def __init__(self, sampler, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, sampler):
+        super().__init__()
         self.sampler = Reference(sampler)
 
-    @batch_cached("loss")
-    def batch_loss(self, batch):
+    @storage_cached("loss")
+    def batch_loss(self, storage):
         '''
         Computes loss for batch
-        input: batch - Batch
+        input: Storage
         output: Tensor, (*batch_shape)
         '''
         raise NotImplementedError()

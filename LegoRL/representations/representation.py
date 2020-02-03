@@ -1,72 +1,143 @@
 import torch
+import numpy as np
+
+from LegoRL.utils.namedTensorsUtils import torch_unflatten
+
+'''
+Representations are tensors for such entities like states, actions, value functions, policies, etc.
+They add additional features like:
+- transforming Q-function to V-function, 
+- handle numpy-PyTorch casts
+- shape checking and naming dimensions.
+
+We use PyTorch 1.3.0 unstable Named Tensors feature to simplify aligning procedures.
+The motivation lies in using different representations for value functions:
+Q-function  - adds "actions" dimension
+Categorical - adds "atoms" dimension
+MultiReward - adds "rewards" dimension
+MultiGamma - adds "discounts" dimension
+and they can be combined in complex variations.
+
+Representations are used as inputs and outputs for Transformation modules in this framework.
+'''
 
 class Representation():
     '''
     Base class for representations in this framework.
+    
     Args:
-        system - System instance
-        tensor - Tensor, containing representation with shape described in class method "shape".
+        data - Tensor, tuple, list or numpy
 
-    Consider that blocks of representation work with specific dimension in the tensor.
-    We use PyTorch 1.3.0 unstable Named Tensors feature to simplify aligning procedures.
+    Provides:
+        tensor - data in PyTorch Tensor format
+        numpy - data in Numpy format
     '''
-    def __init__(self, system, tensor):
-        assert len(self.shape(system)) == 0 or tensor.shape[-len(self.shape(system)):] == self.shape(system)
-        assert None not in tensor.names, "Error: unnamed tensor in representation."
-
-        self.system = system
-        self.tensor = tensor
+    def __init__(self, data):
+        # translating to numpy lists and tuples
+        if isinstance(data, tuple) or isinstance(data, list):
+            data = np.array(data)
+        
+        # shape / names checking
+        full_name = self._parse_batch_dims(data)
+        
+        # storing data
+        if isinstance(data, np.ndarray):
+            self._numpy = data
+        else:
+            self._tensor = data.refine_names(*full_name)
     
     @classmethod
-    def from_linear(cls, system, tensor):
+    def from_linear(cls, tensor):
         '''
         Representation constructor from output of linear layer.
-        input: system - System instance
         input: tensor - Tensor, containing unprocessed representation in its last dimension.
         output: Representation
         '''
-        assert tensor.shape[-1] == cls.shape(system).numel()
+        assert tensor.shape[-1] == cls.rshape().numel()
 
-        # PyTorch Named Tensors 1.3.0 is really unstable :(
-        # unflatten do not support reducing dimension :[
         tensor = tensor.refine_names(..., "features")
-        if len(cls.shape(system)) == 0:
-            tensor = tensor.squeeze("features")
-        else:
-            tensor = tensor.unflatten("features", list(zip(cls.names(), cls.shape(system))))
+        tensor = torch_unflatten(tensor, "features", zip(cls.rnames(), cls.rshape()))
         
-        return cls(system, tensor)
+        return cls(tensor)
+
+    # Numpy - PyTorch translations all done here:
+    @property
+    def numpy(self):
+        if not hasattr(self, "_numpy"):
+            self._numpy = self._tensor.detach().cpu().numpy()
+        return self._numpy
     
-    @classmethod
-    def stack(cls, representations):
-        '''
-        Stacks representations, adding new dimension "timesteps".
-        input: representations - list of Representation
-        output: Representation
-        '''
-        # PyTorch Named Tensors 1.3.0 is really unstable :(
-        # torch.stack does not work with NamedTensors :(
-        names = ("timesteps",) + representations[0].tensor.names
-        tensors = [r.tensor.rename(None) for r in representations]
-        tensor = torch.stack(tensors, dim=0).refine_names(*names)
-        return cls(representations[0].system, tensor)
+    @property
+    def tensor(self):
+        if not hasattr(self, "_tensor"):
+            self._tensor = self._TensorType(self._numpy)
+            self._tensor = self._tensor.refine_names(*self._parse_batch_dims(self._tensor))
+        return self._tensor
     
+    @property
+    def _TensorType(self):
+        '''How to convert self._numpy to PyTorch tensor (either FloatTensor or LongTensor)'''
+        return self.mdp.FloatTensor
+        
+    @numpy.setter
+    def numpy(self, data):
+        self._numpy = data
+        if hasattr(self, "_tensor"):
+            del self._tensor
+
+    @tensor.setter
+    def tensor(self, data):
+        full_name = self._parse_batch_dims(data)
+        self._tensor = data.refine_names(*full_name)
+        if hasattr(self, "_numpy"):
+            del self._numpy
+    
+    # these two methods define what are dimensions of tensor and what are names.
     @classmethod
-    def shape(cls, system):
+    def rshape(cls):
         '''
         Returns representation shape.
-        Consider that tensor also has some batch dimensions at the beginning.
+        This list does not consider batch dimensions at the beginning.
         output: torch.Size
         '''
         raise NotImplementedError()
     
     @classmethod
-    def names(cls):
+    def rnames(cls):
         '''
-        Returns names of all dimensions in the representation.
+        Returns names of dimensions of the representation.
+        This list does not consider batch dimensions at the beginning.
         output: tuple of strings
         '''
-        raise NotImplementedError()
+        raise NotImplementedError()    
+
+    def _parse_batch_dims(self, data):
+        '''
+        Parses additional batch dimensions in data.
+        Stores batch_size and rollout_length in properties.
+        input: data - Tensor or numpy array
+        output: full tuple of dimension names - tuple of strings
+        '''
+        assert len(self.rshape()) == 0 or data.shape[-len(self.rshape()):] == self.rshape()
+
+        names = self.rnames()
+        extra_dims = len(data.shape) - len(names)
+        if extra_dims == 0:
+            self.batch_size = 1
+            self.rollout_length = 0
+        if extra_dims == 1:
+            names = ("batch",) + names
+            self.batch_size = data.shape[0]
+            self.rollout_length = 0
+        if extra_dims == 2:
+            names = ("timesteps", "batch") + names
+            self.batch_size = data.shape[1]
+            self.rollout_length = data.shape[0]
+        assert extra_dims <= 2, "ERROR: Weird batch shape"
+        return names
+
+    def __getitem__(self, idx):
+        return type(self)(self.tensor[idx])
 
     def __repr__(self):
-        raise NotImplementedError()
+        return "Undefined Representation"

@@ -1,5 +1,5 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
+from LegoRL.core.reference import Reference
 
 class PrioritiesUpdater(RLmodule):
     """
@@ -18,7 +18,7 @@ class PrioritiesUpdater(RLmodule):
         self.priority_provider = Reference(priority_provider)
         self.rp_alpha = rp_alpha
 
-    def iteration(self):
+    def _iteration(self):
         '''
         Checks if sampled batch has new priorities.
         It is assumed that priorities come from losses, stored inside this batch.
@@ -29,13 +29,11 @@ class PrioritiesUpdater(RLmodule):
             return
 
         # get priorities of batch
-        # TODO: we do not need LOSS, we need PRIORITIES. There is difference!
         self.debug("asks for new priorities", open=True)
-        batch_priorities = self.priority_provider.batch_loss(sample).detach().cpu().numpy()
-        assert batch_priorities.shape == (len(sample),)
-
+        sample.new_priorities = self.mdp["Priorities"](self.priority_provider.batch_loss(sample).tensor ** self.rp_alpha)
+        
         # update priorities
-        self.sampler.update_priorities(batch_priorities ** self.rp_alpha)
+        self.sampler.update_priorities(sample)
         self.debug("priorities are updated", close=True)
 
     def __repr__(self):

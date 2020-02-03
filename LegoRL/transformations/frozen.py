@@ -1,6 +1,6 @@
-from LegoRL.core.composed import Reference
-from LegoRL.core.cache import cached
-from LegoRL.core.backbone import Backbone
+from LegoRL.core.RLmodule import RLmodule
+from LegoRL.core.reference import Reference
+from LegoRL.transformations.transformation import Transformation
 
 from copy import deepcopy
 
@@ -11,22 +11,27 @@ def Frozen(parclass):
     Args:
         source - RLmodule with "net" property.
     '''
+    assert issubclass(parclass, Transformation), "Can freeze only RLmodules inherited from Transformation"
+
     class Frozen(parclass):
-        def __init__(self, source, timer=100, *args, **kwargs):
-            super().__init__(timer=timer, network=None, *args, **kwargs)
+        def __init__(self, source, timer=100, frozen=False, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self.timer = timer
+            self.frozen = frozen
             self.source = Reference(source)
 
-        def _initialize(self):  # TODO: what if source was not initialized yet?
+        def _initialize(self):
+            self.source.initialize()
             self.net = deepcopy(self.source.net)
-            if hasattr(self.source, "representation"):
-                self.representation = self.source.representation
+            self._output_representation = self.source._output_representation
 
         def unfreeze(self):
             '''Copies weights from source'''
             self.debug("updates frozen network.")
             self.net.load_state_dict(self.source.net.state_dict())
 
-        def iteration(self):
+        def _iteration(self):
             self.unfreeze()
 
         def _save(self, name):
@@ -36,8 +41,7 @@ def Frozen(parclass):
             self.unfreeze()
 
         @classmethod
-        def defaultname(cls):
-            '''output: default name of module, str'''
+        def _defaultname(cls):
             return cls.__name__ + parclass.__name__
 
         def __repr__(self):

@@ -5,22 +5,67 @@ class RLmodule():
     Args:
         timer - how often to call "iteration" methods, int
         frozen - if frozen, "iteration" method is never called, bool
+
+    Provides:
+        initialize: initializes module
+        iteration: training of module
+        visualize: additional logs and plots drawing
     """
     def __init__(self, timer=1, frozen=False):
         self.timer = timer
         self.frozen = frozen
-        self.performed = False
+        
+        self._active = lambda: not self.frozen and self.system.iterations % self.timer == 0        
+        self._initialized = False  # set to true when initialized     
+        self._performed = False    # set to false before each iteration
 
     def _connect_to_system(self, system, name=None, all_modules=[]):
         '''
         Auxiliary method to connect container with system.
-        input: system - System
-        input: name - name for this module
+        input: System
+        input: name - name for this module, str
         input: all_modules - list of dictionaries <name-module>, see Composed for usage.
         '''
         self.system = system
         self.name = name
 
+    def _initialize(self):
+        '''Initialization (override this in subclasses)'''
+        pass            
+
+    def initialize(self):
+        '''Called after connecting to system and dereferencing procedure'''
+        if not self._initialized:
+            self._initialize()
+            self._initialized = True
+
+    def _iteration(self):
+        '''What to do each iteration (override this in subclasses)'''
+        pass
+
+    def iteration(self):
+        '''Called by timer to train the module'''
+        self._performed = False
+        if self._active(): self._iteration()
+
+    def _visualize(self):
+        '''Plot drawing or logging'''
+        pass
+
+    def visualize(self):
+        '''Called to draw plots or write additional logs'''
+        if self._active(): self._visualize()
+
+    @property
+    def mdp(self):
+        '''
+        Returns MDP which this module works with.
+        By default, it is system's environment MDP, but some modules may introduce modifications.
+        output: MDP_config
+        '''
+        return self.system.mdp
+
+    # interface functions ----------------------------------------------------------------
     def log(self, *args, **kwargs):
         '''Adds something to logs'''
         self.system.log(*args, **kwargs)
@@ -28,18 +73,6 @@ class RLmodule():
     def debug(self, *args, **kwargs):
         '''Prints debug message if system is in debugging mode'''
         self.system.debug(self.name, *args, **kwargs)
-
-    def _initialize(self):
-        '''Called after connecting to system and dereferencing procedure'''
-        pass
-
-    def iteration(self):
-        '''Called by timer to train the module'''
-        pass
-
-    def visualize(self):
-        '''Called to draw plots if necessary'''
-        pass
 
     def _write(self, f):
         '''Called to load data from common file'''
@@ -57,11 +90,11 @@ class RLmodule():
         pass
         
     def _load(self, name):
-        '''Called to read from personal files'''
+        '''Called to read from separate files'''
         pass
 
     @classmethod
-    def defaultname(cls):
+    def _defaultname(cls):
         '''output: default name of module, str'''
         return cls.__name__
 

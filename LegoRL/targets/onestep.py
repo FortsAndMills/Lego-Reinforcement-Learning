@@ -1,26 +1,27 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
+from LegoRL.core.reference import Reference
+from LegoRL.buffers.storage import Which
 
-class Target(RLmodule):
+class OneStep(RLmodule):
     """
     Calculates target as r + V(s')
     
     Args:
         value - RLmodule with "V" method
 
-    Provides: target
+    Provides: returns
     """
     def __init__(self, evaluator, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         self.evaluator = Reference(evaluator) 
     
-    def returns(self, batch):
+    def returns(self, storage):
         '''
-        input: batch - Batch
+        input: Storage
         output: V
         '''
-        return self.evaluator.V(batch, of="next state").one_step(batch)
+        return self.evaluator.V(storage, Which.next).one_step(storage)
         
     def __repr__(self):
         return f"Calculates one-step TD target using <{self.evaluator.name}> as next state estimator"

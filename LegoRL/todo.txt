@@ -3,17 +3,12 @@ TODO:
 - [infra] Visualize Q(s, a) for Q-learning. Text on replays? what is the reward after all?
 - [infra] Episode plots: Q spread, Monte-Carlo V, V.
 - [infra] check plotly plotting. Alternative plots smoothing? With dispersion, min and max?
-- [add]: inverse model
-- [tests] Mountain Car with inverse model
-- [add]: curiosity
+- [infra] what if everything exploded at the begining? Reasonable y range
 - [add]: GAE
 - [add]: PPO
 - [optimization]: test vectorized work with SumTree
-- [optimization]: how to store references to same states in ReplayBuffer? Do it in ints?
-- [add]: init?
+- [add]: nn.init?
 - [add]: multi-reward support
-- [add]: continuous actions support
-- [add]: OUNoise
 - [tests]: Pendulum-v0 
 - [add]: DDPG
 - [add]: recurrent network support
@@ -28,6 +23,4 @@ TODO:
 - [add]: CEM
 
 Bugs:
-- bug: target network loading might happen before q_net loading
-- bug: priorities are equal to loss. In DQN it is square root of loss.
 - bug: noisy linear does not work as an actor with deterministic envs.

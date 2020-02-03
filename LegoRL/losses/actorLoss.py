@@ -1,6 +1,6 @@
 from LegoRL.losses.loss import Loss
-from LegoRL.core.cache import batch_cached
-from LegoRL.core.composed import Reference
+from LegoRL.core.cache import storage_cached
+from LegoRL.core.reference import Reference
 
 class ActorLoss(Loss):
     """
@@ -9,30 +9,26 @@ class ActorLoss(Loss):
     
     Args:
         rollout - RLmodule with "sample" method
-        policy - RLmodule with "distribution" method
-        target - RLmodule with "returns" method
-        baseline - RLmodule with "V" method
+        policy - RLmodule with "log_prob" method
+        target - RLmodule with "advantage" method
 
     Provides: loss, batch_loss
     """
-    def __init__(self, rollout, policy, target, baseline, *args, **kwargs):
-        super().__init__(sampler=rollout, *args, **kwargs)
-        
+    def __init__(self, sampler, policy, target):
+        super().__init__(sampler=sampler)        
         self.policy = Reference(policy)
         self.target = Reference(target)
-        self.baseline = Reference(baseline)
 
-    @batch_cached("loss")
-    def batch_loss(self, rollout):
+    @storage_cached("loss")
+    def batch_loss(self, storage):
         '''
-        Calculates loss for surrogate function with same gradient
-        as in Policy Gradient Theorem.
-        input: rollout - Rollout
-        output: Tensor, (*batch_shape)
+        Calculates loss for surrogate function with same gradient as in Policy Gradient Theorem.
+        input: Storage
+        output: Loss
         '''
-        advantages = self.target.returns(rollout).subtract_v(self.baseline.V(rollout))
-        log_probs = self.policy.distribution(rollout).log_prob(rollout.actions.rename(None))
-        return -log_probs * advantages.scalar().detach()
+        advantages = self.target.advantage(storage)
+        log_probs = self.policy.log_prob(storage)
+        return self.mdp["Loss"](-log_probs * advantages.scalar().tensor.detach())
         
     def __repr__(self):
-        return f"Calculates gradient estimation for <{self.policy.name}> using returns from <{self.target.name}>, baseline from <{self.baseline.name}> and rollouts from <{self.sampler.name}>"
+        return f"Calculates gradient estimation for <{self.policy.name}> using advantages from <{self.target.name}> and rollouts from <{self.sampler.name}>"

@@ -1,6 +1,6 @@
-from LegoRL.core.composed import Reference
+from LegoRL.core.reference import Reference
 from LegoRL.losses.loss import Loss
-from LegoRL.core.cache import batch_cached
+from LegoRL.core.cache import storage_cached
 
 import torch
 
@@ -16,22 +16,22 @@ class CriticLoss(Loss):
 
     Provides: loss, batch_loss
     """
-    def __init__(self, sampler, critic, target, *args, **kwargs):
-        super().__init__(sampler=sampler, *args, **kwargs)
+    def __init__(self, sampler, critic, target):
+        super().__init__(sampler=sampler)
         
         self.critic = Reference(critic)
         self.target = Reference(target) 
     
-    @batch_cached("loss")
-    def batch_loss(self, batch):
+    @storage_cached("loss")
+    def batch_loss(self, storage):
         '''
         Calculates loss for batch based on TD-error from DQN algorithm.
-        input: batch - Batch
+        input: Storage
         output: Tensor, (*batch_shape)
         '''
-        q = self.critic.estimate(batch)
+        q = self.critic.estimate(storage)
         with torch.no_grad():
-            target = self.target.returns(batch)
+            target = self.target.returns(storage)
 
         return q.compare(target)
         

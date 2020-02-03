@@ -1,25 +1,24 @@
 from LegoRL.losses.loss import Loss
-from LegoRL.core.cache import batch_cached
-from LegoRL.core.composed import Reference
+from LegoRL.core.cache import storage_cached
+from LegoRL.core.reference import Reference
 
 class EntropyLoss(Loss):
     """
     Entropy loss for stochastic policies
     
     Args:
-        rollout - RLmodule with "sample" method
-        policy - RLmodule with "distribution" method
+        sampler - RLmodule with "sample" method
+        policy - RLmodule transformation, returning Policy
 
     Provides: loss, batch_loss
     """
-    def __init__(self, rollout, policy, *args, **kwargs):
-        super().__init__(sampler=rollout, *args, **kwargs)
-        
+    def __init__(self, sampler, policy):
+        super().__init__(sampler=sampler)        
         self.policy = Reference(policy)
 
-    @batch_cached("loss")
-    def batch_loss(self, rollout):
-        return -self.policy.distribution(rollout).entropy()
+    @storage_cached("loss")
+    def batch_loss(self, storage):
+        return self.mdp["Loss"](-self.policy(storage).entropy())
         
     def __repr__(self):
         return f"Calculates entropy penalty for <{self.policy.name}> using rollouts from <{self.sampler.name}>"

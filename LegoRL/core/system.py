@@ -1,18 +1,17 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.buffers.batch import Batch
+from LegoRL.core.mdp_config import MDPconfig
+from LegoRL.buffers.storage import Storage
 
 from LegoRL.utils.multiprocessing_env import VecEnv, DummyVecEnv
 from collections import defaultdict
 
 import pickle
 import time
-import gym
 import torch
 
 '''
 System class provides communication between all modules inside the agent.
-
-It controls saving, logging and storing constants like observation and action spaces shapes.
+It controls saving and logging.
 '''
 
 class System():
@@ -46,40 +45,22 @@ class System():
             self.env = DummyVecEnv([make_env()])
 
         # useful constants
-        self.USE_CUDA = torch.cuda.is_available()
-        self.FloatTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).float().cuda() if self.USE_CUDA else torch.tensor(*args, **kwargs).float()
-        self.LongTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).cuda() if self.USE_CUDA else torch.tensor(*args, **kwargs)
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"    
-        
-        # useful updates
-        self.gamma = gamma
-        self.observation_shape = self.env.observation_space.shape
-        self.action_space = self.env.action_space
-        if isinstance(self.env.action_space, gym.spaces.Discrete):
-            self.num_actions = self.env.action_space.n
-            self.action_shape = tuple()
-            self.ActionTensor = self.LongTensor
-        elif isinstance(self.env.action_space, gym.spaces.Continuous):
-            self.num_actions = np.array(self.env.action_space.shape).prod()
-            self.action_shape = self.env.action_space.shape
-            self.ActionTensor = self.FloatTensor
-        else:
-            raise Exception("Error: this action space is not supported!")
-        self.initial_state_example = Batch(states=self.env.reset()).to_torch(self)
+        self.mdp = MDPconfig(self.env, gamma)
+        self.initial_state_example = self.mdp[Storage](states=self.env.reset())
 
         # logging
         self.iterations = 0
-        self.logger = defaultdict(list)
-        self.logger_times = defaultdict(list)
-        self.logger_labels = defaultdict(tuple)
-        self.reload_messages = []
+        self.logger = defaultdict(list)                  # lists of values
+        self.logger_times = defaultdict(list)            # lists of timestamps when values were recorded
+        self.logger_labels = defaultdict(tuple)          # xaxis and yaxis names
+        self.reload_messages = []                        # additional messages like reloading from file
         self.time_for_rare_logs = lambda: self.iterations % rare_logs_timer == 0
 
         # saving
         self.file_name = file_name
         self.save_timer = save_timer
 
-        # debugging
+        # debugging mode
         self.debug_on = False
         self._debug_level = 0
 
@@ -87,23 +68,27 @@ class System():
         assert isinstance(agent, RLmodule), "agent must be an instance of RLmodule"
         self.agent = agent
         self.agent._connect_to_system(self)
-        self.agent._initialize()
+        self.agent.initialize()
 
-    def log(self, key, value, x_axis=None, y_axis=None, x_value=None):
+    def log(self, key, value, y_axis=None, x_axis="training iteration", x_value=None):
         """
         Log one value for given key
         input: key - name of logged value, str
-        input: value - storing value
-        input: x_axis - name of axis for plotting the value, str
-        input: y_axis - name of axis for plotting the value, str
-        input: x_value - value of x_axis for this log (system.iterations if None), int
+        input: value - storing value, scalar
+        input: y_axis - name of y-axis for plotting the value (no drawing if None), str
+        input: x_axis - name of x-axis for plotting the value, str
+        input: x_value - value of x-axis for this log (system.iterations if None), int
         """
         self.logger[key].append(value)
         self.logger_times[key].append(x_value or self.iterations)
-        if x_axis is not None:
-            self.logger_labels[key] = (x_axis, y_axis)
+        if y_axis is not None:
+            self.logger_labels[key] = (x_axis or "iteration", y_axis)
 
     def add_message(self, message):
+        """
+        Stores additional information message like reloading from file.
+        input: message - str
+        """
         self.reload_messages.append(f"iteration {self.iterations}: " + message) 
 
     def debug(self, author, message="", open=False, close=False):
@@ -111,7 +96,7 @@ class System():
         Prints debugging message if in debug regime
         input: author - name of message sender, str
         input: message - message to output
-        input: open - grow spacing, bool
+        input: open - open new spacing, bool
         input: close - close previous spacing, bool
         '''
         assert message or open or close, "Debug empty message error!"
@@ -138,7 +123,7 @@ class System():
             # performing iteration and logging time
             start = time.time()
             self.agent.iteration()                
-            self.log("time", time.time() - start, "training iteration", "seconds")
+            self.log("time", time.time() - start, "seconds")
             
             # visualizing
             self.agent.visualize()

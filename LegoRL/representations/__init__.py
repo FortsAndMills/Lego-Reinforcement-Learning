@@ -1,4 +1,5 @@
 from .policy import Policy
+from .gaussianPolicy import GaussianPolicy
 
 from .V import V
 from .Q import Q

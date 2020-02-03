@@ -1,73 +1,75 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
+from LegoRL.core.reference import Reference
+
+from copy import copy
 
 class NstepLatency(RLmodule): 
     """
     Stores transitions more than on one step.
     
     Args:
-        runner - RLmodule with "new_transitions" and "was_reset" properties
+        runner - RLmodule with "sample" method
         n_steps - N steps, int
 
-    Provides: transitions, new_transitions, was_reset
+    Provides: sample
     """       
-    def __init__(self, runner, n_steps=3, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, runner, n_steps=3, frozen=False):
+        super().__init__(frozen=frozen)
         
         self.runner = Reference(runner)
         self.n_steps = n_steps
+        assert self.n_steps > 1
+
         self.nstep_buffer = []
+        self._last_seen_id = None
 
-        self._was_reset = None
-        self._transitions = None
+    def _iteration(self):
+        self.sample(existed=False)
 
-    @property
-    def was_reset(self):
-        return self._was_reset
-
-    def new_transitions(self):
-        return self._transitions if self.performed else None
-
-    def iteration(self):
-        self.transitions()
-
-    def transitions(self):
+    def sample(self, existed=True):
         '''
         Stores observation in buffer and pops n-step transition as observation
-        output: Batch
+        output: Storage
         '''
-        if self.performed:
-            self.debug("returns same transitions")
-            return self._transitions
-        self.performed = True
+        if self._performed:
+            self.debug("returns same transitions.")
+            return self._sample
+        if existed: return None
+        self._performed = True
 
-        transitionBatch = self.runner.new_transitions()
-        if transitionBatch is None:
-            self.debug("no new observations found, no observation generated")
-            self._was_reset = None
-            self._transitions = None
-            return self._transitions
+        storage = self.runner.sample(existed=False)
+        if storage is None:
+            self.debug("no new observations found, no observation generated.")
+            self._sample = None
+            return self._sample
 
-        if self.runner.was_reset:
-            self.debug("runner was reset, so I reset too (nstep buffer cleared)")
+        if self.frozen:
+            self.debug("frozen; does nothing.")
+            self._sample = storage
+            self._last_seen_id = storage.id
+            return self._sample
+
+        if storage.id - 1 != self._last_seen_id:
+            self.debug("runner was reset, so I reset too (nstep buffer cleared).")
             self.nstep_buffer = []
+        self._last_seen_id = storage.id
 
-        self.debug("adds new observations from runner")
-        self.nstep_buffer.append((transitionBatch, self.runner.was_reset))
+        self.debug("adds new observations from runner.")
+        self.nstep_buffer.append(copy(storage))
 
         for i in range(len(self.nstep_buffer) - 1):
-            self.nstep_buffer[i][0].next_states = self.nstep_buffer[-1][0].next_states
-            self.nstep_buffer[i][0].rewards += self.nstep_buffer[-1][0].rewards * self.nstep_buffer[i][0].discounts
-            self.nstep_buffer[i][0].discounts *= self.nstep_buffer[-1][0].discounts
+            self.nstep_buffer[i].next_states.numpy = self.nstep_buffer[-1].next_states.numpy
+            self.nstep_buffer[i].rewards.numpy += self.nstep_buffer[-1].rewards.numpy * self.nstep_buffer[i].discounts.numpy
+            self.nstep_buffer[i].discounts.numpy *= self.nstep_buffer[-1].discounts.numpy
         
         if len(self.nstep_buffer) == self.n_steps:            
-            self._transitions, self._was_reset = self.nstep_buffer.pop(0)
+            self._sample = self.nstep_buffer.pop(0)
+            self._sample.n_steps = self.n_steps
         else:
-            self._was_reset = None
-            self._transitions = None            
+            self._sample = None            
 
         assert len(self.nstep_buffer) < self.n_steps
-        return self._transitions
+        return self._sample
 
     def __repr__(self):
         return f"Substitutes stream from <{self.runner.name}> to {self.n_steps}-step transitions"

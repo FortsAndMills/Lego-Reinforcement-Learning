@@ -32,7 +32,7 @@ class Visualizer(RLmodule):
         self.reward_smoothing = reward_smoothing
         self.points_limit = points_limit
 
-    def visualize(self):
+    def _visualize(self):
         """
         Draws plots with logs
         """

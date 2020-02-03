@@ -1,7 +1,9 @@
+from LegoRL.representations.V import V
+
 import torch
 import torch.nn.functional as F
 
-def Categorical(Vmin=-10, Vmax=10, num_atoms=51):
+def Categorical(parclass, Vmin=-10, Vmax=10, num_atoms=51):
     """
     Categorical value functions.
     Adds new dimension to representation tensor with num_atoms elements.
@@ -15,93 +17,89 @@ def Categorical(Vmin=-10, Vmax=10, num_atoms=51):
         num_atoms - number of atoms in approximation distribution, int
     """
     assert Vmin < Vmax, "Vmin must be less than Vmax!"
+    assert issubclass(parclass, V)
     
-    support = torch.linspace(Vmin, Vmax, num_atoms)#.to(device)
-    support = support.refine_names("atoms")
+    support = torch.linspace(Vmin, Vmax, num_atoms).refine_names("atoms")
     delta_z = float(Vmax - Vmin) / (num_atoms - 1)
 
-    def Categorical(parclass):
-        class CategoricalValue(parclass):
-            @classmethod
-            def shape(cls, system):
-                return torch.Size((num_atoms,)) + super().shape(system)
+    class CategoricalValue(parclass):
+        def expectation(self):
+            '''
+            Reduces "atoms" dimension by computing expectation
+            output: V (atoms dimension reduced)
+            '''
+            probabilities = F.softmax(self.tensor, dim="atoms")
+            outcomes = support.to(self.tensor.device).align_as(self.tensor)
+            return self.construct((probabilities * outcomes).sum(dim="atoms"))
+
+        def one_step(self, storage):
+            '''
+            Performs some magic concerning projecting shifted and squeezed categorical
+            distribution back to the grid (Vmin ... Vmax) with num_atoms.
+            input: Storage
+            output: V (dimensions not changed)
+            '''
+            distributions = F.softmax(self.tensor, dim="atoms").align_to(..., "atoms")
+            rewards = storage.rewards.tensor.align_as(distributions).rename(None)
+            discounts = storage.discounts.tensor.align_as(distributions).rename(None)                
+            supports = support.to(self.tensor.device).align_as(distributions).rename(None)
+
+            names = distributions.names
+            distributions = distributions.rename(None)
+            
+            Tz = rewards + discounts * supports
+            Tz = Tz.clamp(min=Vmin, max=Vmax)
+            b  = (Tz - Vmin) / delta_z
+            l  = b.floor().long()
+            u  = b.ceil().long()
+
+            numel = self.tensor.numel() // num_atoms
+            offset = torch.linspace(0, (numel - 1) * num_atoms, numel).long().view(-1, 1).to(self.tensor.device)
+            
+            proj_dist = torch.zeros_like(distributions)
+            proj_dist.view(-1).index_add_(0, (l + offset).view(-1), (distributions * (u.float() + (b.ceil() == b).float() - b)).view(-1))
+            proj_dist.view(-1).index_add_(0, (u + offset).view(-1), (distributions * (b - l.float())).view(-1))
+            proj_dist /= proj_dist.sum(-1, keepdims=True)
+
+            proj_dist = proj_dist.log()                
+            proj_dist = proj_dist.refine_names(*names).align_as(self.tensor)
+            return self.construct(proj_dist)
+
+        def compare(self, target):
+            '''
+            Calculates KL-divergence between target and this Categorical value.
+            input: target - same dimensions
+            output: Loss
+            '''
+            target_distribution = F.softmax(target.tensor, dim="atoms")
+            distribution = torch.clamp(F.softmax(self.tensor, dim="atoms"), 1e-8, 1 - 1e-8)
+            loss = -(target_distribution * distribution.log()).sum("atoms")
+            return self.mdp["Loss"](loss)
+
+        def greedy(self):
+            return self.expectation().greedy()
+            
+        def value(self, policy=None):
+            if policy is None:
+                return self.gather(self.greedy())
+            return super().value(policy)
+
+        def scalar(self):
+            return self.expectation().scalar()
         
-            @classmethod
-            def names(cls):
-                return ("atoms",) + super().names()
+        @classmethod
+        def rshape(cls):
+            return torch.Size((num_atoms,)) + super().rshape()
+    
+        @classmethod
+        def rnames(cls):
+            return ("atoms",) + super().rnames()
 
-            @classmethod
-            def constructor(cls):
-                dims = super().constructor()
-                dims["atoms"] = Categorical
-                return dims
+        def constructor(cls):
+            dims = super().constructor()
+            dims["atoms"] = lambda parclass: Categorical(parclass, Vmin, Vmax, num_atoms)
+            return dims
 
-            def _expectation(self):
-                '''
-                Reduces atoms dimension.
-                output: V without atoms dimension
-                '''
-                probabilities = F.softmax(self.tensor, dim="atoms")
-                outcomes = support.to(self.system.device).align_as(self.tensor)
-                return self.construct((probabilities * outcomes).sum(dim="atoms"))
-
-            def one_step(self, batch):
-                '''
-                Performs some magic concerning projecting shifted and squeezed categorical
-                distribution back to the grid (Vmin ... Vmax) with num_atoms.
-                input: Batch
-                output: V (dimensions not changed)
-                '''
-                distributions = F.softmax(self.tensor, dim="atoms").align_to(..., "atoms")
-                rewards = batch.rewards.align_as(distributions).rename(None)
-                discounts = batch.discounts.align_as(distributions).rename(None)                
-                supports = support.to(self.system.device).align_as(distributions).rename(None)
-
-                names = distributions.names
-                distributions = distributions.rename(None)
-                
-                Tz = rewards + discounts * supports
-                Tz = Tz.clamp(min=Vmin, max=Vmax)
-                b  = (Tz - Vmin) / delta_z
-                l  = b.floor().long()
-                u  = b.ceil().long()
-
-                numel = self.tensor.numel() // num_atoms
-                offset = torch.linspace(0, (numel - 1) * num_atoms, numel).long().view(-1, 1).to(self.system.device)
-                
-                proj_dist = torch.zeros_like(distributions)
-                proj_dist.view(-1).index_add_(0, (l + offset).view(-1), (distributions * (u.float() + (b.ceil() == b).float() - b)).view(-1))
-                proj_dist.view(-1).index_add_(0, (u + offset).view(-1), (distributions * (b - l.float())).view(-1))
-                proj_dist /= proj_dist.sum(-1, keepdims=True)
-
-                proj_dist = proj_dist.log()                
-                proj_dist = proj_dist.refine_names(*names).align_as(self.tensor)
-                return self.construct(proj_dist)
-
-            def compare(self, target):
-                '''
-                Calculates KL-divergence between target and this Categorical value.
-                input: target - CategoricalV
-                output: FloatTensor, (*batch_shape)
-                '''
-                target_distribution = F.softmax(target.tensor, dim="atoms")
-                distribution = torch.clamp(F.softmax(self.tensor, dim="atoms"), 1e-8, 1 - 1e-8)
-                return -(target_distribution * distribution.log()).sum("atoms")
-
-            def greedy(self):
-                return self._expectation().greedy()
-                
-            def value(self, policy=None):
-                if "actions" not in self.names():
-                    return self
-                if policy is None:
-                    return self.gather(self.greedy())
-                return super().value(policy)
-
-            def scalar(self):
-                return self._expectation().scalar()
-
-            def __repr__(self):    
-                return super().__repr__() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)
-        return CategoricalValue
-    return Categorical
+        def __repr__(self):    
+            return super().__repr__() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)
+    return CategoricalValue

@@ -1,4 +1,4 @@
 from .transition import Transition
-from .batch import Batch
-from .rollout import Rollout
+from .storage import Storage
+from .rolloutStorage import RolloutStorage
 from .replayBuffer import ReplayBuffer

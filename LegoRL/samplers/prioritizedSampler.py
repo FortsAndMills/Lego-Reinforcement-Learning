@@ -1,5 +1,6 @@
+from LegoRL.core.RLmodule import RLmodule
 from LegoRL.samplers.sampler import Sampler
-from LegoRL.buffers.batch import Batch
+from LegoRL.buffers.storage import Storage
 
 import numpy as np
 
@@ -87,19 +88,19 @@ class PrioritizedSampler(Sampler):
     def _initialize(self):        
         self.priorities = SumTree(self.replay.capacity)
 
-    def iteration(self):
-        super().iteration()
+    def _iteration(self):
+        super()._iteration()
 
         # new transitions are stored with max priority
         while self.previous_buffer_pos != self.replay.buffer_pos:
-            self.debug("found new element in replay, stored with max priority")
+            self.debug("found new element in replay, stored with max priority.")
             self.priorities.update(self.previous_buffer_pos, self.max_priority)
             self.previous_buffer_pos = (self.previous_buffer_pos + 1) % self.replay.capacity        
 
     def _generate_sample(self):
         '''
         Samples batch using priorities.
-        output: Batch
+        output: Storage
         '''
         self.debug("samples new batch using priorities.")
 
@@ -110,18 +111,18 @@ class PrioritizedSampler(Sampler):
         # seems like the fastest code for sampling!
         transitions = [self.replay.buffer[idx] for idx in batch_indices]        
         
-        self._sample = Batch.from_list(transitions).to_torch(self.system)
+        self._sample = self.mdp[Storage].from_list(transitions)
         self._sample.priorities = self.priorities[batch_indices]
         self._sample.indices = batch_indices
         return self._sample
 
-    def update_priorities(self, batch_priorities):
+    def update_priorities(self, storage):
         '''
         Updates priorities with batch_priorities for transition on indices from current sample.
-        input: batch_priorities - numpy array, (*batch_shape)
+        input: Storage
         '''
-        new_batch_priorities = batch_priorities.clip(min=1e-5, max=self.clip_priorities)
-        for i, v in zip(self._sample.indices, new_batch_priorities):
+        new_batch_priorities = storage.new_priorities.numpy.clip(min=1e-5, max=self.clip_priorities)
+        for i, v in zip(storage.indices, new_batch_priorities):
             self.priorities.update(i, v)
         
         # update max priority for new transitions

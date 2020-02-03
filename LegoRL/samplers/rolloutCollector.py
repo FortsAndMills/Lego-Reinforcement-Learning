@@ -1,6 +1,6 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
-from LegoRL.buffers.rollout import Rollout
+from LegoRL.core.reference import Reference
+from LegoRL.buffers.rolloutStorage import RolloutStorage
 
 class RolloutCollector(RLmodule):
     """
@@ -19,37 +19,38 @@ class RolloutCollector(RLmodule):
         self.runner = Reference(runner)
         self.rollout_length = rollout_length
 
-        self._rollout = Rollout()
         self._sample = None
+        self._last_seen_id = None
 
     def sample(self):
         """
         Adds transitions from runner to rollout and creates a sample if ?!?.
         output: Batch
         """
-        if self.performed:
+        if self._performed:
             self.debug("returns same sample.")
             return self._sample
-        self.performed = True
+        self._performed = True
 
-        transitions = self.runner.transitions()
-        if transitions is None:
+        runner_sample = self.runner.sample(existed=False)
+        if runner_sample is None:
             self.debug("no new observations found, resetting rollout.")
             self._sample = None
-            self._rollout = Rollout()
+            self._rollout = []
             return self._sample
 
-        if self.runner.was_reset:
-            self._rollout = Rollout()
-            self.debug("resets because runner was reset.")                
+        if runner_sample.id - 1 != self._last_seen_id:
+            self._rollout = []
+            self.debug("resets because runner was reset.")
+        self._last_seen_id = runner_sample.id               
         
-        self._rollout.append(transitions)
+        self._rollout.append(runner_sample)
         
-        assert self._rollout.rollout_length <= self.rollout_length        
-        if self._rollout.rollout_length == self.rollout_length:
+        assert len(self._rollout) <= self.rollout_length        
+        if len(self._rollout) == self.rollout_length:
             self.debug("rollout generated!")
-            self._sample = self._rollout.to_torch(self.system)
-            self._rollout = Rollout()
+            self._sample = self.mdp[RolloutStorage].from_list(self._rollout)
+            self._rollout = []
         else:
             self.debug("not enough transitions collected.")
             self._sample = None

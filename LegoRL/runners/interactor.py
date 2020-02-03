@@ -1,7 +1,7 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.composed import Reference
-from LegoRL.buffers.batch import Batch
-from LegoRL.buffers.rollout import Rollout
+from LegoRL.core.reference import Reference
+from LegoRL.buffers.storage import Storage
+from LegoRL.buffers.rolloutStorage import RolloutStorage
 
 import numpy as np
 from itertools import count
@@ -15,24 +15,19 @@ class Interactor(RLmodule):
         threads - number of environments to create with make_envs, int
         policy - RLmodule with method "act" or None (random behavior will be used)
 
-    Provides: was_reset
+    Provides:
+        step - plays one step in env; returns Storage, rewards and lengths of finished episodes
+        play - plays one episode; returns RolloutStorage
+        act  - writes actions into given Storage; default behavior is random. 
     """
     def __init__(self, threads=1, policy=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.policy = Reference(policy or self)
-
-        self._interrupted = False
         self._threads = threads
-        self._was_reset = None
-
-    @property
-    def was_reset(self):
-        return self._was_reset
 
     def _initialize(self):
         if self.system.make_env is not None:
-            # Else create different environment instances.
             try:
                 if self._threads == 1:
                     self.env = DummyVecEnv([self.system.make_env()])
@@ -51,74 +46,73 @@ class Interactor(RLmodule):
         self._reset()
     
     def _reset(self):
-        '''
-        Resets environment.
-        '''
-        self._interrupted = True
-        
+        '''Resets environment.'''        
         self.ob = self.env.reset()
         assert self.ob.max() > self.ob.min(), "BLANK STATE AFTER INIT ERROR"        
         
-        self.R = np.zeros((self.env.num_envs), dtype=np.float32)
-        self.T = np.zeros((self.env.num_envs), dtype=np.float32)
+        self._id = 0                                              # id of created storages
+        self.done = np.ones((self.env.num_envs))                  # dones from previous step
+        self.R = np.zeros((self.env.num_envs), dtype=np.float32)  # cumulative rewards
+        self.T = np.zeros((self.env.num_envs))                    # episode lengths
         
     def act(self, transitions):
         '''
         Fills actions in constructed transitions. Default behavior is random.
-        Input: Batch
+        input: Storage
         '''
-        transitions.actions = [self.system.action_space.sample() for _ in range(len(transitions))]
+        transitions.actions = [self.mdp.action_space.sample() for _ in range(len(transitions))]
 
     def step(self):
         """
         Plays one step in parallel environment and updates "observation" property.
-        output: transitions - Batch
+        output: transitions - Storage
         output: results - rewards of finished episodes, list of floats
         output: lengths - lengths of finished episodes, list of ints
-        """
-        self._was_reset = self._interrupted
-        self._interrupted = False        
-        
-        transitions = Batch(states=self.ob)
+        """        
+        transitions = self.mdp[Storage](states=self.ob, id=self._id)
         self.policy.act(transitions)
         
         try:
-            self.ob, r, done, info = self.env.step(transitions.actions)
+            self.ob, r, self.done, info = self.env.step(transitions.actions.numpy)
         except:
             self._reset()
             raise Exception("Error during environment step. May be wrong action format? Last actions: {}".format(a))
         
-        transitions.update(rewards=r, next_states=self.ob, discounts=self.system.gamma * (1 - done))
-                
+        transitions.update(rewards=r, next_states=self.ob, discounts=self.mdp.gamma * (1 - self.done))
+               
+        self._id += 1 
         self.R += r
         self.T += 1
-        results = self.R[done]
-        lengths = self.T[done]
-        self.R[done] = 0
-        self.T[done] = 0
+        results = self.R[self.done]
+        lengths = self.T[self.done]
+        self.R[self.done] = 0
+        self.T[self.done] = 0
         
         return transitions, results, lengths
 
-    def play(self, render=False, store_frames=True):     
+    def play(self, render=False, store_frames=True, time_limit=None):     
         """
         Plays full game until first done.        
         If env is vectorized, only first environment's game will be recorded.
         input: render - bool, whether to draw game inline (can be rendered in notebook)
         input: store_frames - bool, whether to store rendered frames in rollout.
-        output: Rollout
+        input: time_limit - number of frames limit, int or None
+        output: RolloutStorage
         """
         self._reset()
 
-        self._rollout = Rollout()
+        self._rollout = []
         if store_frames:
-            self._rollout.frames = [np.copy(self.env.render(mode = 'rgb_array'))]
+            frames = self.env.render(mode = 'rgb_array')
         
-        for t in count():
+        timer = range(time_limit) if time_limit else count()
+        for t in timer:
             transitions, _, _ = self.step()
             
             self._rollout.append(transitions)
-            if store_frames:       
-                self._rollout.frames.append(np.copy(self.env.render(mode = 'rgb_array')))
+            if store_frames:
+                self._rollout[-1].frames = frames       
+                frames = self.env.render(mode = 'rgb_array')
             
             if render:
                 import matplotlib.pyplot as plt
@@ -128,11 +122,10 @@ class Interactor(RLmodule):
                 plt.imshow(self.env.render(mode='rgb_array'))
                 plt.show()
             
-            if self._rollout.discounts[-1][0] == 0:
+            if self.done[0]:
                 break
         
-        self._interrupted = True
-               
+        self._rollout = self.mdp[RolloutStorage].from_list(self._rollout)               
         return self._rollout
 
     def __repr__(self):

@@ -5,55 +5,27 @@ import torch
 class V(Representation):
     """
     Value function representation.
-    """
-    @classmethod
-    def shape(cls, system):
-        return torch.Size([])
-    
-    @classmethod
-    def names(cls):
-        return tuple()
-    
-    @classmethod
-    def constructor(cls):
-        '''
-        Returns class fabric, responsible for each dimension of the tensor.
-        output: dict,
-            keys - dimensions names, str
-            values - class fabrics
-        '''
-        return {}
 
-    def construct(self, tensor):
-        '''
-        Returns same class as cls with fabrics 
-        corresponding to names of dimensions of tensor.
-        input: tensor - FloatTensor
-        output: V with dimensions as in input tensor
-        '''
-        result = V
-        for name, fabric in self.constructor().items():
-            if name in tensor.names:
-                result = fabric(result)
-        return result(self.system, tensor)
-        
-    def one_step(self, batch):
+    A chain of subclasses can inherit from V to create more complex representations.
+    Subclasses basically add another dimension to representation, i.e. Q would add "actions" dim.
+    """        
+    def one_step(self, storage):
         '''
         Calculates one-step approximation using this tensor as V(s') estimation
-        input: Batch
+        input: Storage
         output: V (dimensions not changed)
         '''
-        rewards = batch.rewards.align_as(self.tensor)
-        discounts = batch.discounts.align_as(self.tensor)
-        return self.construct(rewards + discounts * self.tensor)
+        rewards = storage.rewards.tensor.align_as(self.tensor)
+        discounts = storage.discounts.tensor.align_as(self.tensor)
+        return self.construct(rewards + self.tensor * discounts)
 
     def compare(self, target):
         '''
         Calculates loss using model prediction and given target ("guess")
-        input: V
-        output: FloatTensor, (*batch_shape)
+        input: target - V (with same dimensions)
+        output: Loss
         '''
-        return (target.tensor - self.tensor).pow(2)    
+        return self.mdp["Loss"]((target.tensor - self.tensor).pow(2))  
 
     def subtract_v(self, v):
         '''
@@ -71,15 +43,43 @@ class V(Representation):
         '''
         return self.construct(self.tensor + v.tensor.align_as(self.tensor))
 
-    def scalar(self):        
+    def scalar(self):
         '''
-        Returns scalar version of this representation without additional dimensions.
-        output: FloatTensor, (*batch_shape)
+        Returns scalar value for each element in batch
+        output: V (all extra dimensions reduced)
         '''
-        return self.tensor
-
-    def value(self):
         return self
+
+    @classmethod
+    def rshape(cls):
+        return torch.Size([])
+    
+    @classmethod
+    def rnames(cls):
+        return tuple()
+    
+    @classmethod
+    def constructor(cls):
+        '''
+        Returns class fabric, responsible for each dimension of the tensor.
+        When some dimension is reduced, this constructor is used to create emerged class.
+        output: dict,
+            keys - dimensions names, str
+            values - class fabrics
+        '''
+        return {}
+
+    def construct(self, tensor):
+        '''
+        Returns class corresponding to names of dimensions of given tensor.
+        input: tensor - FloatTensor
+        output: V with dimensions as in input tensor
+        '''
+        result = V
+        for name, fabric in self.constructor().items():
+            if name in tensor.names:
+                result = fabric(result)
+        return self.mdp[result](tensor)
 
     def __repr__(self):    
         return 'V-function'
