@@ -1,6 +1,7 @@
+from LegoRL.representations.representation import Which
 from LegoRL.core.RLmodule import RLmodule
 from LegoRL.core.reference import Reference
-from LegoRL.buffers.storage import Which, stack
+from LegoRL.buffers.storage import stack
 
 import torch
 
@@ -23,7 +24,7 @@ class MaxTrace(RLmodule):
     def returns(self, rollout):
         '''
         Calculates max trace returns, estimating the V of last state using critic.
-        input: Rollout
+        input: RolloutStorage
         output: V
         '''
         self.debug("starts computing max trace returns", open=True)
@@ -31,7 +32,7 @@ class MaxTrace(RLmodule):
         with torch.no_grad():
             returns = [self.evaluator.V(rollout, Which.last)]
             for step in reversed(range(rollout.rollout_length)):
-                returns.append(returns[-1].one_step(rollout[step]))
+                returns.append(returns[-1].one_step(rollout.rewards[step], rollout.discounts[step]))
 
         self.debug(close=True)
         return stack(returns[-1:0:-1])

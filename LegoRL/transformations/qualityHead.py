@@ -1,6 +1,6 @@
+from LegoRL.representations.representation import Which
 from LegoRL.transformations.criticHead import CriticHead
 from LegoRL.representations.Q import Q
-from LegoRL.buffers.storage import Which
 
 import torch
 

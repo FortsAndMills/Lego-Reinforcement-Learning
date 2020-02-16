@@ -27,7 +27,10 @@ class Policy(Representation):
 
     @classmethod
     def uniform(cls):
-        '''constructs uniform policy'''
+        '''
+        Constructs uniform policy
+        output: Policy
+        '''
         return cls(torch.ones(cls.mdp.num_actions, names=("actions",)).to(cls.mdp.device))
 
     def __getattr__(self, name):
@@ -41,6 +44,7 @@ class Policy(Representation):
     def rnames(cls):
         return ("actions",)    
 
-    def __repr__(self):    
-        return 'Policy for {} actions'.format(self.mdp.num_actions)
+    @classmethod
+    def _defaultname(cls): 
+        return 'Discrete Policy'
 

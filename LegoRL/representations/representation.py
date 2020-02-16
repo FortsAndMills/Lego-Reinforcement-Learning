@@ -1,7 +1,10 @@
+from LegoRL.utils.namedTensorsUtils import torch_unflatten
+
 import torch
 import numpy as np
 
-from LegoRL.utils.namedTensorsUtils import torch_unflatten
+from enum import Enum
+Which = Enum('Which', 'current next last all')
 
 '''
 Representations are tensors for such entities like states, actions, value functions, policies, etc.
@@ -58,7 +61,32 @@ class Representation():
         tensor = tensor.refine_names(..., "features")
         tensor = torch_unflatten(tensor, "features", zip(cls.rnames(), cls.rshape()))
         
-        return cls(tensor)
+        return cls(tensor)    
+
+    def _parse_batch_dims(self, data):
+        '''
+        Parses additional batch dimensions in data.
+        Stores batch_size and rollout_length in properties.
+        input: data - Tensor or numpy array
+        output: full tuple of dimension names - tuple of strings
+        '''
+        assert len(self.rshape()) == 0 or data.shape[-len(self.rshape()):] == self.rshape()
+
+        names = self.rnames()
+        extra_dims = len(data.shape) - len(names)
+        if extra_dims == 0:
+            self.batch_size = 1
+            self.rollout_length = 0
+        if extra_dims == 1:
+            names = ("batch",) + names
+            self.batch_size = data.shape[0]
+            self.rollout_length = 0
+        if extra_dims == 2:
+            names = ("timesteps", "batch") + names
+            self.batch_size = data.shape[1]
+            self.rollout_length = data.shape[0]
+        assert extra_dims <= 2, "ERROR: Weird batch shape"
+        return names
 
     # Numpy - PyTorch translations all done here:
     @property
@@ -109,35 +137,31 @@ class Representation():
         This list does not consider batch dimensions at the beginning.
         output: tuple of strings
         '''
-        raise NotImplementedError()    
-
-    def _parse_batch_dims(self, data):
-        '''
-        Parses additional batch dimensions in data.
-        Stores batch_size and rollout_length in properties.
-        input: data - Tensor or numpy array
-        output: full tuple of dimension names - tuple of strings
-        '''
-        assert len(self.rshape()) == 0 or data.shape[-len(self.rshape()):] == self.rshape()
-
-        names = self.rnames()
-        extra_dims = len(data.shape) - len(names)
-        if extra_dims == 0:
-            self.batch_size = 1
-            self.rollout_length = 0
-        if extra_dims == 1:
-            names = ("batch",) + names
-            self.batch_size = data.shape[0]
-            self.rollout_length = 0
-        if extra_dims == 2:
-            names = ("timesteps", "batch") + names
-            self.batch_size = data.shape[1]
-            self.rollout_length = data.shape[0]
-        assert extra_dims <= 2, "ERROR: Weird batch shape"
-        return names
-
+        raise NotImplementedError()
+    
+    # interface functions ----------------------------------------------------------------
     def __getitem__(self, idx):
+        '''
+        ?
+        '''
         return type(self)(self.tensor[idx])
 
+    def append(self, last):
+        return type(self)(torch.cat([self.tensor, last.tensor.align_as(self.tensor)], "timesteps"))            
+
+    def crop(self, which):
+        if which is Which.current:
+            return type(self)(self.tensor[:-1])
+        if which is Which.next:
+            return type(self)(self.tensor[1:])
+        if which is Which.last:
+            return type(self)(self.tensor[-1])
+        raise Exception("Error: crop issue")
+
+    @classmethod
+    def _defaultname(cls):
+        '''output: default name of representation, str'''
+        return cls.__name__
+
     def __repr__(self):
-        return "Undefined Representation"
+        return self._defaultname()

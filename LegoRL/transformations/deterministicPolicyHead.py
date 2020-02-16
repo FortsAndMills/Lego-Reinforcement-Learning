@@ -1,5 +1,5 @@
+from LegoRL.representations.representation import Which
 from LegoRL.transformations.head import Head
-from LegoRL.buffers.storage import Which
 from LegoRL.representations.standard import Action
 
 class DeterministicPolicyHead(Head):

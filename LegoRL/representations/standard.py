@@ -66,25 +66,28 @@ class Discount(Representation):
     def __repr__(self):
         return "Discount Representation"
 
-def Embedding(embedding_size=0, emb_name="Embedding"):
+def Embedding(size=0, emb_name="Embedding"):
     '''
     Embedding representation (arbitrary shaped vector)
     Args:
-        embedding_size - int, scalar if zero
+        size - int, scalar if zero
     '''
     class Embedding(Representation):
+        embedding_size = size
+
         @classmethod
         def rshape(cls):
-            return torch.Size([embedding_size]) if embedding_size else torch.Size([])
+            return torch.Size([cls.embedding_size]) if cls.embedding_size else torch.Size([])
 
         @classmethod
         def rnames(cls):
-            return ("features",) if embedding_size else tuple()
+            return ("features",) if cls.embedding_size else tuple()
 
         def compare(self, other):
             cmp = (self.tensor - other.tensor)**2
-            return cmp.sum(dim="features") if embedding_size else cmp
+            return self.mdp["Loss"](cmp.sum(dim="features") if self.embedding_size else cmp)
 
-        def __repr__(self):
-            return emb_name + f" of shape {embedding_size}" if embedding_size else ""
+        @classmethod
+        def _defaultname(cls):
+            return emb_name + f" of size {cls.embedding_size}" if cls.embedding_size else ""
     return Embedding

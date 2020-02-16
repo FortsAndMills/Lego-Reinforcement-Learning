@@ -40,6 +40,8 @@ class MDPconfig():
             self.ActionTensor = self.FloatTensor
         else:
             raise Exception("Error: this action space is not supported!")
+
+        self._representations = dict()
         
     def __getitem__(self, repr):
         '''
@@ -48,9 +50,15 @@ class MDPconfig():
         input: repr - Representation class or str (than scalar embedding is created)
         output: class
         '''
+        clsname = repr if isinstance(repr, str) else repr._defaultname()
+        if clsname in self._representations:
+           return self._representations[clsname]
+
         repr = Embedding(emb_name=repr) if isinstance(repr, str) else repr
         class MDP_wrapped_repr(repr):
             mdp = self
+
+        self._representations[clsname] = MDP_wrapped_repr      
         return MDP_wrapped_repr
 
     def __repr__(self):

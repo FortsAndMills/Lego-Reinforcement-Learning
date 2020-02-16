@@ -5,6 +5,7 @@ from LegoRL.buffers.storage import Storage
 from LegoRL.utils.multiprocessing_env import VecEnv, DummyVecEnv
 from collections import defaultdict
 
+import os
 import pickle
 import time
 import torch
@@ -22,27 +23,27 @@ class System():
         agent - RLmodule
         env - gym environment
         make_env - function returning function to create a new instance of environment.
+        already_vectorized - tell that env already returns lists of obs, r, done, bool
         gamma - discount factor, float from 0 to 1
-        file_name - file name to save model, str or None
+        folder_name - folder name to save model, str or None
         save_timer - timer for saving models, int
         rare_logs_timer - timer for computing expensive logs like average magnitude.
     """
-    def __init__(self, agent, env=None, make_env=None, gamma=1, file_name=None, save_timer=1000, rare_logs_timer=100):
+    def __init__(self, agent, env=None, make_env=None, already_vectorized=False, gamma=1, folder_name=None, save_timer=1000, rare_logs_timer=100):
         # creating environment creation function for runners.
         if env is None and make_env is None: 
             raise Exception("Environment env or function make_env must be provided")
         
-        self.env = None
+        self.env = env
         self.make_env = make_env
 
-        # If environment is given explicitly, create DummyVecEnv shell if needed:
-        if env is not None:
-            if isinstance(env, VecEnv):
-                self.env = env
+        # if environment is given explicitly, create DummyVecEnv shell if needed:
+        if not already_vectorized:
+            if env is not None:
+                if not isinstance(env, VecEnv):
+                    self.env = DummyVecEnv([lambda: env])
             else:
-                self.env = DummyVecEnv([lambda: env])
-        else:
-            self.env = DummyVecEnv([make_env()])
+                self.env = DummyVecEnv([make_env()])
 
         # useful constants
         self.mdp = MDPconfig(self.env, gamma)
@@ -57,7 +58,7 @@ class System():
         self.time_for_rare_logs = lambda: self.iterations % rare_logs_timer == 0
 
         # saving
-        self.file_name = file_name
+        self.folder_name = folder_name
         self.save_timer = save_timer
 
         # debugging mode
@@ -129,8 +130,8 @@ class System():
             self.agent.visualize()
 
             # saving
-            if self.file_name is not None and self.iterations % self.save_timer == 0:
-                self.save(self.file_name)
+            if self.folder_name is not None and self.iterations % self.save_timer == 0:
+                self.save(self.folder_name)
 
         self.debug_on = False
 
@@ -142,41 +143,39 @@ class System():
         return sum(self.logger["time"])
     
     # saving and loading functions
-    def save(self, name=None):
+    def save(self, folder_name=None):
         """saving to file"""
-        name = name or self.file_name
-        if name is None:
-            raise Exception("Error. File name is not provided.")
+        folder_name = folder_name or self.folder_name
+        if folder_name is None:
+            raise Exception("Error. Folder name is not provided.")
+
+        os.makedirs(folder_name, exist_ok=True)
 
         # saving logs to one file
-        f = open(name, 'wb')
+        f = open(folder_name + "/system", 'wb')
         pickle.dump(self.logger, f)
         pickle.dump(self.logger_times, f)
         pickle.dump(self.logger_labels, f)
         pickle.dump(self.iterations, f)
         pickle.dump(self.reload_messages, f)
-
-        # agent can also write something to this file
-        self.agent._write(f)
         f.close()
 
         # he can also store something in personal files
-        self.agent._save(name)
+        self.agent._save(folder_name)
         
-    def load(self, name=None):
+    def load(self, folder_name=None):
         """loading from file"""
-        name = name or self.file_name
-        if name is None:
+        folder_name = folder_name or self.folder_name
+        if folder_name is None:
             raise Exception("Error. File name is not provided.")
         
         # reading from common file
-        f = open(name, 'rb')
+        f = open(folder_name + "/system", 'rb')
         self.logger = pickle.load(f)
         self.logger_times = pickle.load(f)
         self.logger_labels = pickle.load(f)
         self.iterations = pickle.load(f)
         self.reload_messages = pickle.load(f)
-        self.agent._read(f)
         f.close()
 
         # reading from personal files

@@ -1,7 +1,8 @@
+from LegoRL.representations.representation import Which
 from LegoRL.core.RLmodule import RLmodule
 from LegoRL.core.cache import cached_forward
-from LegoRL.buffers.storage import Which
 
+import os
 import torch
 
 '''
@@ -28,14 +29,15 @@ class Transformation(RLmodule):
         self.net = network
 
     def _initialize(self):
-        print(f"Initializing <{self.name}>:")
+        if self.net:
+            print(f"Initializing <{self.name}>:")
 
-        input_shape = self.input_representation.rshape()
-        print(f"  Input shape is {input_shape}")
-        output_shape = self.output_representation.rshape()
-        print(f"  Output shape is {output_shape}")   
+            input_shape = self.input_representation.rshape()
+            print(f"  Input shape is {input_shape}")
+            output_shape = self.output_representation.rshape()
+            print(f"  Output shape is {output_shape}")   
 
-        self.net = self.net(input_shape.numel(), output_shape.numel()).to(self.mdp.device)
+            self.net = self.net(input_shape.numel(), output_shape.numel()).to(self.mdp.device)
 
     @property
     def input_representation(self):
@@ -61,11 +63,13 @@ class Transformation(RLmodule):
         output = self.net(input)
         return self.output_representation.from_linear(output)
 
-    def _load(self, name):
-        self.net.load_state_dict(torch.load(name + "-" + self.name))
+    def _load(self, folder_name):
+        path = os.path.join(folder_name, self.name)            
+        self.net.load_state_dict(torch.load(path))
 
-    def _save(self, name):
-        torch.save(self.net.state_dict(), name + "-" + self.name)    
+    def _save(self, folder_name):
+        path = os.path.join(folder_name, self.name)
+        torch.save(self.net.state_dict(), path)    
 
     def __repr__(self):
         return f"Undefined transformation"

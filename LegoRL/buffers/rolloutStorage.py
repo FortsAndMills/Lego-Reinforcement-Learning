@@ -1,5 +1,6 @@
+from LegoRL.representations.representation import Which
 from LegoRL.buffers.transition import Transition
-from LegoRL.buffers.storage import Storage, Which, stack
+from LegoRL.buffers.storage import Storage, stack
 
 class RolloutStorage(Storage):
     """
@@ -50,22 +51,17 @@ class RolloutStorage(Storage):
             all - all states from rollout
         output: Representation
         '''
-        assert which is not None
         if which is Which.current:
             return self.all_states[:-1]
         if which is Which.next:
             return self.all_states[1:]
         if which is Which.last:
             return self.all_states[-1]
-        return self.all_states
+        if which is Which.all:
+            return self.all_states
+        raise Exception("Error: 'which' marker is None?")
 
     # interface functions ----------------------------------------------------------------
-    def __getitem__(self, idx):  
-        """Checks if idx is not string, than it is index (for time axis)"""
-        if isinstance(idx, str):
-            return super().__getitem__(idx)
-        return self.mdp[Storage]((key, value[idx]) for key, value in self.items())
-
     @property
     def rollout_length(self):
         return self.all_states.rollout_length - 1
@@ -85,6 +81,10 @@ class RolloutStorage(Storage):
 
     def __len__(self):
         return self.rollout_length * self.batch_size
+
+    @classmethod
+    def _defaultname(cls):
+        return "RolloutStorage"
 
     def __repr__(self):
         return f"Rollout of length {self.rollout_length} of size {self.batch_size}. Additional information stored: {self.additional_keys}"

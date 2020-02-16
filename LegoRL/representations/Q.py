@@ -53,8 +53,9 @@ def StateActionV(parclass):
             dims["actions"] = StateActionV
             return dims
 
-        def __repr__(self):    
-            return f'Q-function for {self.mdp.num_actions} actions'
+        @classmethod
+        def _defaultname(cls): 
+            return f'Q-function'
     return Quality
 
 # convinient reduction

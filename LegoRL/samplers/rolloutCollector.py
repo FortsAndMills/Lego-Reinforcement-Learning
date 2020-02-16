@@ -8,12 +8,12 @@ class RolloutCollector(RLmodule):
     Based on: https://arxiv.org/abs/1312.5602
     
     Args:
-        runner - RLmodule with "transitions" and "was_reset" properties
+        runner - RLmodule with "sample" method
         rollout_length - length of rollout to collect on each iteration, int        
 
     Provides: sample
     """
-    def __init__(self, runner, rollout_length = 1, *args, **kwargs):
+    def __init__(self, runner, rollout_length = 5, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.runner = Reference(runner)
@@ -24,8 +24,8 @@ class RolloutCollector(RLmodule):
 
     def sample(self):
         """
-        Adds transitions from runner to rollout and creates a sample if ?!?.
-        output: Batch
+        Adds transitions from runner to rollout and creates a sample if desired length is reached.
+        output: RolloutStorage
         """
         if self._performed:
             self.debug("returns same sample.")

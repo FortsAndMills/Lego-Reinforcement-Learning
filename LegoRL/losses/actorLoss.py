@@ -8,7 +8,7 @@ class ActorLoss(Loss):
     Based on: https://arxiv.org/abs/1602.01783
     
     Args:
-        rollout - RLmodule with "sample" method
+        sampler - RLmodule with "sample" method
         policy - RLmodule with "log_prob" method
         target - RLmodule with "advantage" method
 
@@ -26,9 +26,9 @@ class ActorLoss(Loss):
         input: Storage
         output: Loss
         '''
-        advantages = self.target.advantage(storage)
+        advantages = self.target.advantage(storage).scalar().tensor.detach()
         log_probs = self.policy.log_prob(storage)
-        return self.mdp["Loss"](-log_probs * advantages.scalar().tensor.detach())
+        return self.mdp["Loss"](-log_probs * advantages)
         
     def __repr__(self):
         return f"Calculates gradient estimation for <{self.policy.name}> using advantages from <{self.target.name}> and rollouts from <{self.sampler.name}>"

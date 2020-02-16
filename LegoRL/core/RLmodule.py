@@ -74,22 +74,14 @@ class RLmodule():
         '''Prints debug message if system is in debugging mode'''
         self.system.debug(self.name, *args, **kwargs)
 
-    def _write(self, f):
-        '''Called to load data from common file'''
-        pass
-        
-    def _read(self, f):
-        '''Called to read data from common file'''
-        pass
-
-    def _save(self, name):
+    def _save(self, folder_name):
         '''
         Called when saved if something must be stored in separate files 
         (like, neural net state dict)
         '''
         pass
         
-    def _load(self, name):
+    def _load(self, folder_name):
         '''Called to read from separate files'''
         pass
 

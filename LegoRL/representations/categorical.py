@@ -32,16 +32,17 @@ def Categorical(parclass, Vmin=-10, Vmax=10, num_atoms=51):
             outcomes = support.to(self.tensor.device).align_as(self.tensor)
             return self.construct((probabilities * outcomes).sum(dim="atoms"))
 
-        def one_step(self, storage):
+        def one_step(self, rewards, discounts):
             '''
             Performs some magic concerning projecting shifted and squeezed categorical
             distribution back to the grid (Vmin ... Vmax) with num_atoms.
-            input: Storage
+            input: Reward
+            input: Discount
             output: V (dimensions not changed)
             '''
             distributions = F.softmax(self.tensor, dim="atoms").align_to(..., "atoms")
-            rewards = storage.rewards.tensor.align_as(distributions).rename(None)
-            discounts = storage.discounts.tensor.align_as(distributions).rename(None)                
+            rewards = rewards.tensor.align_as(distributions).rename(None)
+            discounts = discounts.tensor.align_as(distributions).rename(None)                
             supports = support.to(self.tensor.device).align_as(distributions).rename(None)
 
             names = distributions.names
@@ -95,11 +96,13 @@ def Categorical(parclass, Vmin=-10, Vmax=10, num_atoms=51):
         def rnames(cls):
             return ("atoms",) + super().rnames()
 
+        @classmethod
         def constructor(cls):
             dims = super().constructor()
             dims["atoms"] = lambda parclass: Categorical(parclass, Vmin, Vmax, num_atoms)
             return dims
 
-        def __repr__(self):    
-            return super().__repr__() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)
+        @classmethod
+        def _defaultname(cls):    
+            return super()._defaultname() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)
     return CategoricalValue

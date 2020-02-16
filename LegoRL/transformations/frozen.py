@@ -22,6 +22,7 @@ def Frozen(parclass):
             self.source = Reference(source)
 
         def _initialize(self):
+            super()._initialize()
             self.source.initialize()
             self.net = deepcopy(self.source.net)
             self._output_representation = self.source._output_representation
@@ -34,7 +35,7 @@ def Frozen(parclass):
         def _iteration(self):
             self.unfreeze()
 
-        def _save(self, name):
+        def _save(self, folder_name):
             pass
 
         def _load(self, name):  # TODO: what if source was not loaded yet?

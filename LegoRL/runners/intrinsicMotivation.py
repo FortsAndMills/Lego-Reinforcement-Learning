@@ -3,25 +3,32 @@ from LegoRL.core.reference import Reference
 from LegoRL.core.reference import ReferenceList
 
 import numpy as np
+from copy import copy
 
 class IntrinsicMotivation(RLmodule): 
     """
     Adds intrinsic motivation to the rewards from other runner.
     
     Args:
-        runner - RLmodule with "sample" method.
+        runner - RLmodule with "sample" method and "episodes_done" property.
         motivations - list of RLmodules with "curiosity" method.
         coeffs - weight of intrinsic reward, float.
+        regime - "add", "replace", "stack", str
+        cold_start - iterations before adding, int.
 
     Provides:
         sample - returns Storage with transitions from interaction.
     """       
-    def __init__(self, runner, motivations, coeffs=None, frozen=False):
+    def __init__(self, runner, motivations, coeffs=None, regime="add", cold_start=1000, frozen=False):
         super().__init__(frozen=frozen)
+
+        assert regime in {"add", "replace", "stack"}
+        self.regime = regime
         
         self.runner = Reference(runner)
         self.motivations = ReferenceList(motivations)
         self.coeffs = coeffs or [1.] * len(self.motivations)
+        self.cold_start = cold_start
         
         assert len(self.coeffs) == len(self.motivations), "Error: there must be weights per each motivation"
         assert len(self.motivations) > 0, "Error: there must be at least one motivation"
@@ -49,6 +56,11 @@ class IntrinsicMotivation(RLmodule):
             self._sample = None
             return self._sample
 
+        if self.system.iterations < self.cold_start:
+            self.debug("cold start regime, no intrinsic motivation.")
+            self._sample = storage
+            return self._sample
+
         if self.frozen:
             self.debug("frozen; does nothing.")
             self._sample = storage
@@ -67,14 +79,24 @@ class IntrinsicMotivation(RLmodule):
             self.intrinsic_R[i] += ir
             self._last_seen_id = storage.id
 
+            episodes_done = self.runner.episodes_done - sum(storage.discounts.numpy == 0)
             for res in self.intrinsic_R[i][storage.discounts.numpy == 0]:
-                self.log(motivation.name + " curiosity", res, "reward", "episode", self.runner.episodes_done)
+                episodes_done += 1
+                self.log(self.motivations[i].name + " curiosity", res, "reward", "episode", episodes_done)
+                
             self.intrinsic_R[i][storage.discounts.numpy == 0] = 0
 
         # returning updated transitions
-        self.debug("adds intrinsic motivation to transitions.", close=True)
-        self._sample = storage.copy()
-        self._sample.rewards.numpy += intrinsic_rewards
+        self._sample = copy(storage)
+        if self.regime == "add":
+            self.debug("adds intrinsic motivation to transitions' rewards.", close=True)
+            self._sample.rewards.numpy += intrinsic_rewards
+        elif self.regime == "replace":
+            self.debug("replaces rewards in transitions with intrinsic motivation.", close=True)
+            self._sample.rewards.numpy = intrinsic_rewards
+        elif self.regime == "stack":
+            self.debug("adds intrinsic motivation to transitions as another rewards.", close=True)
+            raise NotImplementedError()
         return self._sample
 
     def __repr__(self):

@@ -1,6 +1,7 @@
 from LegoRL.core.RLmodule import RLmodule
 from LegoRL.core.reference import Reference, ReferenceList
 
+import os
 import torch
 import numpy as np
 
@@ -59,7 +60,7 @@ class Trainer(RLmodule):
 
             full_loss += weight * loss
 
-            self.log(loss_provider.name, (weight * loss).detach().cpu().numpy(), f"{self.name} + loss")
+            self.log(loss_provider.name, (weight * loss).detach().cpu().numpy(), f"{self.name} loss")
 
         # performing optimization step
         self.debug("performs optimization step.", close=True)
@@ -74,7 +75,7 @@ class Trainer(RLmodule):
             self.log(self.name + " gradient_norm", g, "gradient norm")
 
         if len(self.losses) > 1:
-            self.log(self.name + " full loss", full_loss.detach().cpu().numpy(), f"{self.name} + loss")
+            self.log(self.name + " full loss", full_loss.detach().cpu().numpy(), f"{self.name} loss")
         
         if self._is_noised and self.system.time_for_rare_logs():
             self.log(self.name + " magnitude", self.average_magnitude(), "noise magnitude")
@@ -95,11 +96,13 @@ class Trainer(RLmodule):
         '''
         return sum(p.numel() for p in self.full_network.parameters() if p.requires_grad)
 
-    def _load(self, name):
-        self.optimizer.load_state_dict(torch.load(name + "-" + self.name))
+    def _load(self, folder_name):
+        path = os.path.join(folder_name, self.name)
+        self.optimizer.load_state_dict(torch.load(path))
 
-    def _save(self, name):
-        torch.save(self.optimizer.state_dict(), name + "-" + self.name)
+    def _save(self, folder_name):
+        path = os.path.join(folder_name, self.name)
+        torch.save(self.optimizer.state_dict(), path)
 
     def __repr__(self):
         return (f"Trains " + 

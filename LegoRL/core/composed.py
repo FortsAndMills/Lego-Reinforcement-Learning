@@ -91,21 +91,13 @@ class Composed(RLmodule):
             module.visualize()        
     
     # interface functions ----------------------------------------------------------------
-    def _write(self, f):
+    def _save(self, folder_name):
         for module in self.modules.values():
-            module._write(f)
+            module._save(folder_name)
         
-    def _read(self, f):
+    def _load(self, folder_name):
         for module in self.modules.values():
-            module._read(f)
-
-    def _save(self, name):
-        for module in self.modules.values():
-            module._save(name)
-        
-    def _load(self, name):
-        for module in self.modules.values():
-            module._load(name)
+            module._load(folder_name)
 
     def __repr__(self):
         s = ""

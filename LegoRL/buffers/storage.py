@@ -1,12 +1,9 @@
-from LegoRL.representations.representation import Representation
+from LegoRL.representations.representation import Representation, Which
 from LegoRL.buffers.transition import Transition
 from LegoRL.representations.standard import State, Action, Reward, Discount
 
 import numpy as np
 from LegoRL.utils.namedTensorsUtils import torch_stack
-
-from enum import Enum
-Which = Enum('Which', 'current next last all')
 
 def stack(to_stack):
     '''
@@ -75,14 +72,15 @@ class Storage(dict):
             all - both
         output: Representation
         '''
-        assert which is not None
         if which is Which.current:
             return self.states
         if which is Which.next:
             return self.next_states
         if which is Which.last:
             return self.next_states
-        return stack([self.states, self.next_states])
+        if which is Which.all:
+            return stack([self.states, self.next_states])
+        raise Exception("Error: 'which' marker is None?")
 
     def average(self, name):        
         """
@@ -143,6 +141,10 @@ class Storage(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+    @classmethod
+    def _defaultname(cls):
+        return "Storage"
 
     def __repr__(self):
         return f"Batch of size {self.batch_size}. Additional information stored: {self.additional_keys}"

@@ -9,14 +9,15 @@ class V(Representation):
     A chain of subclasses can inherit from V to create more complex representations.
     Subclasses basically add another dimension to representation, i.e. Q would add "actions" dim.
     """        
-    def one_step(self, storage):
+    def one_step(self, rewards, discounts):
         '''
         Calculates one-step approximation using this tensor as V(s') estimation
-        input: Storage
+        input: Reward
+        input: Discount
         output: V (dimensions not changed)
         '''
-        rewards = storage.rewards.tensor.align_as(self.tensor)
-        discounts = storage.discounts.tensor.align_as(self.tensor)
+        rewards = rewards.tensor.align_as(self.tensor)
+        discounts = discounts.tensor.align_as(self.tensor)
         return self.construct(rewards + self.tensor * discounts)
 
     def compare(self, target):
@@ -79,7 +80,9 @@ class V(Representation):
         for name, fabric in self.constructor().items():
             if name in tensor.names:
                 result = fabric(result)
-        return self.mdp[result](tensor)
-
-    def __repr__(self):    
+        ans = self.mdp[result](tensor)
+        return ans
+    
+    @classmethod
+    def _defaultname(cls):   
         return 'V-function'

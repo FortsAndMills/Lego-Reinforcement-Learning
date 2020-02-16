@@ -51,44 +51,42 @@ class Interactor(RLmodule):
         assert self.ob.max() > self.ob.min(), "BLANK STATE AFTER INIT ERROR"        
         
         self._id = 0                                              # id of created storages
-        self.done = np.ones((self.env.num_envs))                  # dones from previous step
+        self.done = np.ones((self.env.num_envs), dtype=np.bool)   # dones from previous step
         self.R = np.zeros((self.env.num_envs), dtype=np.float32)  # cumulative rewards
         self.T = np.zeros((self.env.num_envs))                    # episode lengths
         
-    def act(self, transitions):
+    def act(self, storage):
         '''
         Fills actions in constructed transitions. Default behavior is random.
         input: Storage
         '''
-        transitions.actions = [self.mdp.action_space.sample() for _ in range(len(transitions))]
+        storage.actions = [self.mdp.action_space.sample() for _ in range(len(storage))]
 
     def step(self):
         """
         Plays one step in parallel environment and updates "observation" property.
         output: transitions - Storage
-        output: results - rewards of finished episodes, list of floats
-        output: lengths - lengths of finished episodes, list of ints
-        """        
-        transitions = self.mdp[Storage](states=self.ob, id=self._id)
+        output: info - dictionary with additional data
+        """
+        self.R[self.done] = 0
+        self.T[self.done] = 0
+
+        transitions = self.mdp[Storage](states=self.ob, id=self._id, start=self.done)
         self.policy.act(transitions)
         
         try:
             self.ob, r, self.done, info = self.env.step(transitions.actions.numpy)
         except:
             self._reset()
-            raise Exception("Error during environment step. May be wrong action format? Last actions: {}".format(a))
+            raise Exception(f"Error during environment step. May be wrong action format? Last actions: {transitions.actions.numpy}")
         
         transitions.update(rewards=r, next_states=self.ob, discounts=self.mdp.gamma * (1 - self.done))
                
         self._id += 1 
         self.R += r
         self.T += 1
-        results = self.R[self.done]
-        lengths = self.T[self.done]
-        self.R[self.done] = 0
-        self.T[self.done] = 0
         
-        return transitions, results, lengths
+        return transitions, info
 
     def play(self, render=False, store_frames=True, time_limit=None):     
         """
@@ -107,12 +105,13 @@ class Interactor(RLmodule):
         
         timer = range(time_limit) if time_limit else count()
         for t in timer:
-            transitions, _, _ = self.step()
+            transitions, _ = self.step()
             
-            self._rollout.append(transitions)
             if store_frames:
-                self._rollout[-1].frames = frames       
+                transitions.frames = frames       
                 frames = self.env.render(mode = 'rgb_array')
+
+            self._rollout.append(transitions)
             
             if render:
                 import matplotlib.pyplot as plt

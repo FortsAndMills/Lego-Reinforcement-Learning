@@ -31,6 +31,7 @@ class GaussianPolicy(Representation):
     def rnames(cls):
         return ("musigma",) + ("actionsI" + "I"*k for k in range(len(cls.mdp.action_shape)))
 
-    def __repr__(self):    
-        return 'Gaussian policy'
+    @classmethod
+    def _defaultname(cls):   
+        return 'Gaussian Policy'
 

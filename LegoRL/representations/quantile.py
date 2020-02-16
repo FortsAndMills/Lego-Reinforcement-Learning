@@ -62,6 +62,7 @@ def Quantile(parclass, num_atoms=51):
             dims["atoms"] = lambda parclass: Quantile(parclass, num_atoms)
             return dims
 
-        def __repr__(self):    
-            return super().__repr__() + f' in quantile form with {num_atoms} atoms'
+        @classmethod
+        def _defaultname(cls):    
+            return super()._defaultname() + f' in quantile form with {num_atoms} atoms'
     return QuantileValue

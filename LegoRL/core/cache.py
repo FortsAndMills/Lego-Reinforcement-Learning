@@ -1,4 +1,4 @@
-from LegoRL.buffers.storage import Which
+from LegoRL.representations.representation import Which
 
 '''
 Transformations are augmented with cache, 
@@ -25,11 +25,16 @@ def cached_forward(forward):
                 self.debug(f"reused{suffix(which)} from cache!")
                 return storage[key]
             elif self.name + suffix(Which.all) in storage:
-                raise NotImplementedError()
-            elif which is Which.all and (self.name + suffix(Which.current) in storage
-                                     and self.name + suffix(Which.last) in storage):
-                raise NotImplementedError()
-            
+                self.debug(f"reused{suffix(which)} from cache (used all)!")
+                return storage[self.name + suffix(Which.all)].crop(which)
+            elif which is Which.all and self.name + suffix(Which.current) in storage:
+                self.debug(f"needs all, and current is in cache; will compute only for last")
+                output_current = storage[self.name + suffix(Which.current)]
+                output_last = cached(self, storage, Which.last)
+                output = output_current.append(output_last)
+                storage[key] = output
+                return output
+
         output = forward(self, storage, which)
         
         self.debug(f"forward pass{suffix(which)} computed.")

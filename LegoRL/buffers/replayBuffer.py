@@ -6,7 +6,7 @@ class ReplayBuffer(RLmodule):
     Replay Memory storing all transitions from runner.
     
     Args:
-        runner - RLmodule with "new_transitions", "was_reset" properties
+        runner - RLmodule with "sample" method
         capacity - size of buffer, int
 
     Provides:
@@ -43,21 +43,22 @@ class ReplayBuffer(RLmodule):
         Collects new observations from runner.
         """   
         storage = self.runner.sample()
-        if storage is not None:
-            self.debug("adds new observations from runner.")
-
-            for transition in storage.transitions():
-                # saving memory by not storing same state twice
-                # we can do that if storage's id is following previous id
-                if ((not hasattr(storage, "n_steps") or storage.n_steps == 1) and
-                    storage.id - 1 == self._last_seen_id):
-                    transition.state = self.buffer[self.buffer_pos - len(storage)].next_state
-                self._last_seen_id = storage.id
-
-                # storing transition                
-                self._store_transition(transition)
-        else:
+        if storage is None:
             self.debug("no new observations found.")
+            return
+
+        self.debug("adds new observations from runner.")
+        for transition in storage.transitions():
+            # saving memory by not storing same state twice
+            # we can do that if storage's id is following previous id
+            # and provided transitions go one after another (n_steps = 1)
+            if ((not hasattr(storage, "n_steps") or storage.n_steps == 1) and
+                storage.id - 1 == self._last_seen_id):
+                transition.state = self.buffer[self.buffer_pos - len(storage)].next_state
+            self._last_seen_id = storage.id
+
+            # storing transition                
+            self._store_transition(transition)
         
     def __len__(self):
         return len(self.buffer)

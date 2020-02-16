@@ -1,6 +1,6 @@
+from LegoRL.representations.representation import Which
 from LegoRL.core.reference import Reference
 from LegoRL.representations.policy import Policy
-from LegoRL.buffers.storage import Which
 from LegoRL.transformations.qualityHead import QualityHead
 
 import torch
