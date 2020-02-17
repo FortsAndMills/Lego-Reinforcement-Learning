@@ -54,7 +54,7 @@ def StateActionV(parclass):
             return dims
 
         @classmethod
-        def _defaultname(cls): 
+        def _default_name(cls): 
             return f'Q-function'
     return Quality
 

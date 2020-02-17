@@ -69,6 +69,11 @@ class Runner(Interactor):
         # triggers one step in environment.
         self.sample(existed=False)
 
+    def hyperparameters(self):
+        return {"timer": self.timer,
+                "num_envs": self.env.num_envs if self._initialized else f"{self._threads} threads"
+        }
+
     @property
     def fps(self):
         """

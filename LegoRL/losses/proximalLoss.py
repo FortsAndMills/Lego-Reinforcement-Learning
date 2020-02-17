@@ -39,6 +39,9 @@ class ProximalLoss(Loss):
         surr2 = torch.clamp(ratio, 1.0 - self.ppo_clip, 1.0 + self.ppo_clip) * advantages
         
         return self.mdp["Loss"](-torch.min(surr1, surr2))
+
+    def hyperparameters(self):
+        return {"ppo_clip": ppo_clip}
         
     def __repr__(self):
         return f"Calculates PPO gradient estimation for <{self.policy.name}> using samples from <{self.sampler.name}>"

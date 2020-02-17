@@ -6,6 +6,7 @@ from LegoRL.utils.multiprocessing_env import VecEnv, DummyVecEnv
 from collections import defaultdict
 
 import os
+import yaml
 import pickle
 import time
 import torch
@@ -148,8 +149,18 @@ class System():
         folder_name = folder_name or self.folder_name
         if folder_name is None:
             raise Exception("Error. Folder name is not provided.")
-
+        
+        # creating directory
         os.makedirs(folder_name, exist_ok=True)
+
+        # storing hyperparameters        
+        hp = self.agent.hyperparameters()
+        with open(folder_name + "/hyperparameters.yaml", 'w') as yaml_file:
+            yaml.dump(hp, yaml_file, default_flow_style=False)
+
+        # storing agent scheme        
+        with open(folder_name + "/agent.txt", 'w') as f:
+            f.write(self.agent.__repr__())
 
         # saving logs to one file
         f = open(folder_name + "/system", 'wb')

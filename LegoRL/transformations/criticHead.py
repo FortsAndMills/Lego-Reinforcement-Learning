@@ -21,3 +21,6 @@ class CriticHead(Head):
             # TODO: cache issue?
             v0 = self(self.system.initial_state_example).scalar().detach().item()
             self.log(self.name + " initial state value", v0, "$V(s_0)$")
+
+    def hyperparameters(self):
+        return {"representation": self._output_representation._default_name()}

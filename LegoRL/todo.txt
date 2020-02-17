@@ -1,5 +1,7 @@
 TODO:
 - [bug]: frames are empty, no videos?
+- [infra]: what if everything exploded at the begining? Reasonable y range
+- [infra]: unity rendering?
 - [add]: PPO
 - [bug]: What about train-eval modes?
 - [add]: nn.init?
@@ -7,13 +9,11 @@ TODO:
 - [add]: recurrent network support
 - [infra]: Visualize Q(s, a) for Q-learning. Text on replays? what is the reward after all?
 - [infra]: Episode plots: Q spread, Monte-Carlo V, V.
-- [infra]: what if everything exploded at the begining? Reasonable y range
 - [infra]: check plotly plotting. Alternative plots smoothing? With dispersion, min and max?
 - [optimization]: test vectorized work with SumTree
 - [add]: DDPG
 - [tests]: Pendulum-v0
 - [tests]: Continuous Mountain Car
-- [infra]: hyperparameters list
 - [tests]: Several runners tests
 - [infra]: graphviz scheme visualisation?
 - [infra]: in parallel environments, draw several reward lines?

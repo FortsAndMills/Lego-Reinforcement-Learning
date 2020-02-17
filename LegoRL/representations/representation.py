@@ -159,9 +159,9 @@ class Representation():
         raise Exception("Error: crop issue")
 
     @classmethod
-    def _defaultname(cls):
+    def _default_name(cls):
         '''output: default name of representation, str'''
         return cls.__name__
 
     def __repr__(self):
-        return self._defaultname()
+        return self._default_name()

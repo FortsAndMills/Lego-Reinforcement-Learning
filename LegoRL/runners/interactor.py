@@ -127,5 +127,8 @@ class Interactor(RLmodule):
         self._rollout = self.mdp[RolloutStorage].from_list(self._rollout)               
         return self._rollout
 
+    def hyperparameters(self):
+        return {"num_envs": self.env.num_envs, "timer": self.timer}
+
     def __repr__(self):
         raise NotImplementedError()

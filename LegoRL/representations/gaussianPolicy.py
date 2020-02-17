@@ -32,6 +32,6 @@ class GaussianPolicy(Representation):
         return ("musigma",) + ("actionsI" + "I"*k for k in range(len(cls.mdp.action_shape)))
 
     @classmethod
-    def _defaultname(cls):   
+    def _default_name(cls):   
         return 'Gaussian Policy'
 

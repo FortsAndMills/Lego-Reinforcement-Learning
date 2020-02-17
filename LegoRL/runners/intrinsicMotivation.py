@@ -99,5 +99,12 @@ class IntrinsicMotivation(RLmodule):
             raise NotImplementedError()
         return self._sample
 
+    def hyperparameters(self):
+        hp = {"cold_start": self.cold_start, "regime": self.regime}
+        if len(self.motivations) > 1:
+            for motivation, coeff in zip(self.motivations, self.coeffs):
+                hp[motivation.name + " coeff"] = coeff
+        return hp
+
     def __repr__(self):
         return f"Adds intrinsic rewards from <{[motivation.name for motivation in self.motivations]}> with weights {self.coeffs} to stream from <{self.runner.name}>"

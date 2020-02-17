@@ -20,6 +20,8 @@ class eGreedy(RLmodule):
         super().__init__(frozen=frozen)
         
         self.greedy_policy = Reference(greedy_policy)
+        
+        self.hyperparameters = lambda: {"epsilon_start": epsilon_start, "epsilon_final": epsilon_final, "epsilon_decay": epsilon_decay}
         self.epsilon_by_frame = lambda: epsilon_final + (epsilon_start - epsilon_final) * \
                                         math.exp(-1. * self.system.iterations / epsilon_decay)
 

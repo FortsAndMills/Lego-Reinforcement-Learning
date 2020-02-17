@@ -53,5 +53,8 @@ class Sampler(RLmodule):
         else:
             return self._generate_sample()
 
+    def hyperparameters(self):
+        return {"batch_size": self.batch_size, "cold_start": self.cold_start}
+
     def __repr__(self):
         return f"Samples mini-batches from <{self.replay.name}>"

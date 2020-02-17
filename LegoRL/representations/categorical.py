@@ -103,6 +103,6 @@ def Categorical(parclass, Vmin=-10, Vmax=10, num_atoms=51):
             return dims
 
         @classmethod
-        def _defaultname(cls):    
-            return super()._defaultname() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)
+        def _default_name(cls):    
+            return super()._default_name() + ' in categorical from with {} atoms from {} to {}'.format(num_atoms, Vmin, Vmax)
     return CategoricalValue

@@ -71,5 +71,8 @@ class NstepLatency(RLmodule):
         assert len(self.nstep_buffer) < self.n_steps
         return self._sample
 
+    def hyperparameters(self):
+        return {"n_steps": self.n_steps}
+
     def __repr__(self):
         return f"Substitutes stream from <{self.runner.name}> to {self.n_steps}-step transitions"

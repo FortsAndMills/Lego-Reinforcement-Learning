@@ -59,6 +59,9 @@ class ReplayBuffer(RLmodule):
 
             # storing transition                
             self._store_transition(transition)
+
+    def hyperparameters(self):
+        return {"capacity": self.capacity}
         
     def __len__(self):
         return len(self.buffer)

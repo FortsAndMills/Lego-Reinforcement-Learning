@@ -47,6 +47,9 @@ class OUNoise(RLmodule):
             self.noise -= self.config.OU_theta * self.noise
             self.noise += self.config.OU_sigma * np.random.normal((storage.batch_size, *self.mdp.action_shape))
             storage.actions.numpy += self.noise
+
+    def hyperparameters(self):
+        return {"OU_theta": self.OU_theta, "OU_sigma": self.OU_sigma}
         
     def __repr__(self):
         return f"Adds Ornstein–Uhlenbeck noise to actions of <{self.greedy_policy.name}>"

@@ -42,8 +42,11 @@ def Frozen(parclass):
             self.unfreeze()
 
         @classmethod
-        def _defaultname(cls):
+        def _default_name(cls):
             return cls.__name__ + parclass.__name__
+
+        def hyperparameters(self):
+            return {"timer": self.timer}
 
         def __repr__(self):
             return f"Copy of <{self.source.name}>, updated each {self.timer} iteration"

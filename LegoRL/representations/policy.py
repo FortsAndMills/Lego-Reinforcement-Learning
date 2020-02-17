@@ -45,6 +45,6 @@ class Policy(Representation):
         return ("actions",)    
 
     @classmethod
-    def _defaultname(cls): 
+    def _default_name(cls): 
         return 'Discrete Policy'
 

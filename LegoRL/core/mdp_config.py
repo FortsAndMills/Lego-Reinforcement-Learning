@@ -50,7 +50,7 @@ class MDPconfig():
         input: repr - Representation class or str (than scalar embedding is created)
         output: class
         '''
-        clsname = repr if isinstance(repr, str) else repr._defaultname()
+        clsname = repr if isinstance(repr, str) else repr._default_name()
         if clsname in self._representations:
            return self._representations[clsname]
 

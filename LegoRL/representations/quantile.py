@@ -63,6 +63,6 @@ def Quantile(parclass, num_atoms=51):
             return dims
 
         @classmethod
-        def _defaultname(cls):    
-            return super()._defaultname() + f' in quantile form with {num_atoms} atoms'
+        def _default_name(cls):    
+            return super()._default_name() + f' in quantile form with {num_atoms} atoms'
     return QuantileValue

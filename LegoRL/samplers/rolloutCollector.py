@@ -57,5 +57,8 @@ class RolloutCollector(RLmodule):
 
         return self._sample
 
+    def hyperparameters(self):
+        return {"rollout_length": self.rollout_length}
+
     def __repr__(self):
         return f"Collects rollouts of length {self.rollout_length} from <{self.runner.name}>"

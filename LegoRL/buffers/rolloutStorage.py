@@ -83,7 +83,7 @@ class RolloutStorage(Storage):
         return self.rollout_length * self.batch_size
 
     @classmethod
-    def _defaultname(cls):
+    def _default_name(cls):
         return "RolloutStorage"
 
     def __repr__(self):

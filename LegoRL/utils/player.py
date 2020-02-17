@@ -37,11 +37,14 @@ class Player(Interactor):
         store_frames = self.record_timer is not None and self.system.iterations % self.record_timer == 0
 
         rollout = self.play(render=False, store_frames=store_frames, time_limit=self.time_limit)
-        self.log(self.name + " evaluation", sum(rollout.rewards.numpy)[0], "reward", "evaluation stages")
+        self.log(self.name + " evaluation", sum(rollout.rewards.numpy)[0], "reward")
 
         if store_frames:
             path = os.path.join(self.videos_path, f'iter. {self.system.iterations}.mp4')
             imageio.mimwrite(path, rollout["frames"])
+
+    def hyperparameters(self):
+        return {}
 
     def __repr__(self):
         return f"Plays full game each {self.timer} iteration using <{self.policy.name}> policy"

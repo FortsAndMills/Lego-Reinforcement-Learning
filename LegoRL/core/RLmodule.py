@@ -65,6 +65,13 @@ class RLmodule():
         '''
         return self.system.mdp
 
+    def hyperparameters(self):
+        '''
+        Returns all hyperparameters that this module introduces to the algorithm
+        output: dict
+        '''
+        return {}
+
     # interface functions ----------------------------------------------------------------
     def log(self, *args, **kwargs):
         '''Adds something to logs'''
@@ -86,7 +93,7 @@ class RLmodule():
         pass
 
     @classmethod
-    def _defaultname(cls):
+    def _default_name(cls):
         '''output: default name of module, str'''
         return cls.__name__
 

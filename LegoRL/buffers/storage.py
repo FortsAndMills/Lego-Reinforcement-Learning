@@ -143,7 +143,7 @@ class Storage(dict):
         self[key] = value
 
     @classmethod
-    def _defaultname(cls):
+    def _default_name(cls):
         return "Storage"
 
     def __repr__(self):

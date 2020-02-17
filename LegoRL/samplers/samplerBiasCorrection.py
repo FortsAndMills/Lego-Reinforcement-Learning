@@ -21,6 +21,8 @@ class SamplerBiasCorrection(RLmodule):
         super().__init__(*args, **kwargs)
 
         self.sampler = Reference(sampler)
+
+        self.hyperparameters = lambda: {"rp_beta_start": rp_beta_start, "rp_beta_iterations": rp_beta_iterations}
         self.rp_beta = lambda: min(1.0, rp_beta_start + self.system.iterations * (1.0 - rp_beta_start) / rp_beta_iterations)
 
         self._sample = None

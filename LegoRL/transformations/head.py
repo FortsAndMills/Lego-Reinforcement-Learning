@@ -41,4 +41,4 @@ class Head(Transformation):
 
     def __repr__(self):
         connected = "connected to <{self.backbone.name}>, " if isinstance(self.backbone, RLmodule) else "" 
-        return "Head, " + connected + f"modeling {self._output_representation._defaultname()}"
+        return "Head, " + connected + f"modeling {self._output_representation._default_name()}"

@@ -88,6 +88,6 @@ def Embedding(size=0, emb_name="Embedding"):
             return self.mdp["Loss"](cmp.sum(dim="features") if self.embedding_size else cmp)
 
         @classmethod
-        def _defaultname(cls):
+        def _default_name(cls):
             return emb_name + f" of size {cls.embedding_size}" if cls.embedding_size else ""
     return Embedding

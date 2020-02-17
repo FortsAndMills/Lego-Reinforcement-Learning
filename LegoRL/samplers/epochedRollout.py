@@ -61,5 +61,8 @@ class EpochedRollout(RLmodule):
         self._sample = self.rollout_sample[indices]
         return self._sample
 
+    def hyperparameters(self):
+        return {"epochs": self.epochs, "batch_size": self.batch_size}
+
     def __repr__(self):
         return f"Collects rollouts of length {self.rollout_length} from <{self.runner.name}>"

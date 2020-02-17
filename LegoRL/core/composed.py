@@ -43,7 +43,7 @@ class Composed(RLmodule):
         
         # determining name for this module
         # just use module name by default
-        module.name = name or module._defaultname().lower()
+        module.name = name or module._default_name().lower()
         assert module.name not in self.modules, f"Error: module with name {module.name} already exists"
 
         # adding it to our dict of modules
@@ -88,7 +88,15 @@ class Composed(RLmodule):
 
     def _visualize(self):
         for module in self.modules.values():
-            module.visualize()        
+            module.visualize()
+
+    def hyperparameters(self):
+        hp = {}
+        for module in self.modules.values():
+            module_hp = module.hyperparameters()
+            if len(module_hp) > 0:
+                hp[module.name] = module_hp
+        return hp
     
     # interface functions ----------------------------------------------------------------
     def _save(self, folder_name):

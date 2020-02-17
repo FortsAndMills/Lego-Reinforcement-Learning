@@ -127,6 +127,9 @@ class PrioritizedSampler(Sampler):
         
         # update max priority for new transitions
         self.max_priority = max(self.max_priority, new_batch_priorities.max())
+
+    def hyperparameters(self):
+        return {"clip_priorities": self.clip_priorities}
         
     def __repr__(self):
         return f"Samples mini-batch from <{self.replay.name}> using priorities"

@@ -104,6 +104,20 @@ class Trainer(RLmodule):
         path = os.path.join(folder_name, self.name)
         torch.save(self.optimizer.state_dict(), path)
 
+    def hyperparameters(self):
+        hp = {}
+        hp["timer"] = self.timer
+
+        if len(self.losses) > 1:
+            for loss, weight in zip(self.losses, self.weights):
+                hp[loss.name + " weight"] = weight
+        
+        hp["clip_gradients"] = self.clip_gradients
+        hp["optimizer"] = type(self.optimizer).__name__ if self._initialized else self.optimizer.__name__
+        for name, val in self.optimizer_args.items():
+            hp["optimizer " + name] = val
+        return hp
+
     def __repr__(self):
         return (f"Trains " + 
                 ", ".join(["<" + transformation.name + ">" for transformation in self.transformations]) + 

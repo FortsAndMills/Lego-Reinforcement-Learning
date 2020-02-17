@@ -50,6 +50,9 @@ class GAE(MaxTrace):
 
         self.debug(close=True)
         return stack(returns[::-1])
-        
+    
+    def hyperparameters(self):
+        return {"GAE tau": self.tau, "use truncated GAE": self.truncated_gae}
+
     def __repr__(self):
         return f"Estimates GAE returns using <{self.evaluator.name}> to evaluate last state and <{self.baseline.name}> as baseline"

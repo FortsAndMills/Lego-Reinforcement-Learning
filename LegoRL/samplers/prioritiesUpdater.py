@@ -36,5 +36,8 @@ class PrioritiesUpdater(RLmodule):
         self.sampler.update_priorities(sample)
         self.debug("priorities are updated", close=True)
 
+    def hyperparameters(self):
+        return {"rp_alpha": self.rp_alpha}
+
     def __repr__(self):
         return f"Updates priorities of <{self.sampler.name}> using priorities from <{self.priority_provider.name}>"

@@ -84,5 +84,5 @@ class V(Representation):
         return ans
     
     @classmethod
-    def _defaultname(cls):   
+    def _default_name(cls):   
         return 'V-function'
