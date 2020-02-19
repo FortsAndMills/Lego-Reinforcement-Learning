@@ -5,7 +5,7 @@
 - [x] ActorCritic
 - [x] Curiosity (inverse dynamics model + forward dynamics in filtered feature space)
 - [x] RND
-- [ ] PPO
+- [x] PPO
 - [ ] Multi-reward / Multi-gamma support
 - [ ] Recurrent networks support
 - [ ] World models

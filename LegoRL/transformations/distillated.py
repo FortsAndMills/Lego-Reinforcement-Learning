@@ -30,4 +30,5 @@ class Distillated(Backbone):
             truth = self.random_network(storage)
         return prediction.compare(truth)
 
-    #TODO: __repr__
+    def __repr__(self):
+        return f"Predicts embeddings from <{self.random_network.name}>"

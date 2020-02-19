@@ -1,11 +1,12 @@
 from LegoRL.representations.representation import Which
-from LegoRL.core.RLmodule import RLmodule
 from LegoRL.core.reference import Reference
-from LegoRL.buffers.storage import stack
+from LegoRL.core.cache import storage_cached
+from LegoRL.buffers.storage import stack, Storage
+from LegoRL.targets.rolloutTarget import RolloutTarget
 
 import torch
 
-class MaxTrace(RLmodule):
+class MaxTrace(RolloutTarget):
     """
     MaxTrace advantage estimator.
     A(s, a) = r(s') + r(s'') + ... V(s_{last})
@@ -21,7 +22,8 @@ class MaxTrace(RLmodule):
         self.evaluator = Reference(evaluator)
         self.baseline = Reference(baseline or evaluator)
 
-    def returns(self, rollout):
+    @storage_cached("returns")
+    def _rollout_returns(self, rollout):
         '''
         Calculates max trace returns, estimating the V of last state using critic.
         input: RolloutStorage
@@ -34,10 +36,11 @@ class MaxTrace(RLmodule):
             for step in reversed(range(rollout.rollout_length)):
                 returns.append(returns[-1].one_step(rollout.rewards[step], rollout.discounts[step]))
 
-        self.debug(close=True)
+        self.debug(close=True)        
         return stack(returns[-1:0:-1])
 
-    def advantage(self, rollout):
+    @storage_cached("advantage")
+    def _rollout_advantage(self, rollout):
         return self.returns(rollout).subtract_v(self.baseline.V(rollout))
         
     def __repr__(self):

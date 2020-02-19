@@ -1,12 +1,10 @@
 TODO:
 - [bug]: frames are empty, no videos?
-- [infra]: what if everything exploded at the begining? Reasonable y range
-- [infra]: unity rendering?
-- [add]: PPO
-- [bug]: What about train-eval modes?
+- [bug]: unity +2
 - [add]: nn.init?
 - [add]: multi-reward support
 - [add]: recurrent network support
+- [bug]: What about train-eval modes?
 - [infra]: Visualize Q(s, a) for Q-learning. Text on replays? what is the reward after all?
 - [infra]: Episode plots: Q spread, Monte-Carlo V, V.
 - [infra]: check plotly plotting. Alternative plots smoothing? With dispersion, min and max?
@@ -25,4 +23,3 @@ TODO:
 - [add]: CEM
 - [bug]: noisy linear does not work as an actor with deterministic envs.
 - [add]: decorrelator for timer-based environments
-- [bug]: no done flag for timer limits in timer-based environments

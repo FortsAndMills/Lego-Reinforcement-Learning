@@ -79,7 +79,9 @@ class Storage(dict):
         if which is Which.last:
             return self.next_states
         if which is Which.all:
-            return stack([self.states, self.next_states])
+            chained = stack([self.states, self.next_states])
+            chained._chained = True
+            return chained
         raise Exception("Error: 'which' marker is None?")
 
     def average(self, name):        
@@ -109,6 +111,10 @@ class Storage(dict):
         if key == "discounts" and not isinstance(value, Discount):
             self[key] = value = self.mdp[Discount](value)
         return value
+
+    # TODO: think
+    def from_full_rollout(self, data):
+        return data.batch(self.indices)
 
     # interface functions ----------------------------------------------------------------
     @property

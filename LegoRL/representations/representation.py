@@ -1,4 +1,4 @@
-from LegoRL.utils.namedTensorsUtils import torch_unflatten
+from LegoRL.utils.namedTensorsUtils import torch_unflatten, torch_index
 
 import torch
 import numpy as np
@@ -42,6 +42,7 @@ class Representation():
         
         # shape / names checking
         full_name = self._parse_batch_dims(data)
+        self._chained = False
         
         # storing data
         if isinstance(data, np.ndarray):
@@ -84,7 +85,7 @@ class Representation():
         if extra_dims == 2:
             names = ("timesteps", "batch") + names
             self.batch_size = data.shape[1]
-            self.rollout_length = data.shape[0]
+            self.rollout_length = data.shape[0] - 1
         assert extra_dims <= 2, "ERROR: Weird batch shape"
         return names
 
@@ -142,18 +143,38 @@ class Representation():
     # interface functions ----------------------------------------------------------------
     def __getitem__(self, idx):
         '''
-        ?
+        ? TODO
         '''
+        # NamedTensors issue
+        if isinstance(idx, np.ndarray):
+            return type(self)(torch_index(self.tensor, idx))
         return type(self)(self.tensor[idx])
+
+    def batch(self, indices):
+        '''
+        Returns subset by given indices
+        input: indices - numpy array, ints
+        output: Representation
+        '''
+        data = self.tensor.flatten(["timesteps", "batch"], "batch")
+        return type(self)(torch_index(data, indices))
 
     def append(self, last):
         return type(self)(torch.cat([self.tensor, last.tensor.align_as(self.tensor)], "timesteps"))            
 
     def crop(self, which):
         if which is Which.current:
-            return type(self)(self.tensor[:-1])
+            if self._chained:
+                assert self.rollout_length == 1
+                return type(self)(self.tensor[0])
+            else:
+                return type(self)(self.tensor[:-1])
         if which is Which.next:
-            return type(self)(self.tensor[1:])
+            if self._chained:
+                assert self.rollout_length == 1
+                return type(self)(self.tensor[1])
+            else:
+                return type(self)(self.tensor[1:])
         if which is Which.last:
             return type(self)(self.tensor[-1])
         raise Exception("Error: crop issue")

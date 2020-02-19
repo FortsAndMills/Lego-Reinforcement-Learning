@@ -1,6 +1,6 @@
 from LegoRL.core.cache import storage_cached
 from LegoRL.representations.representation import Which
-from LegoRL.buffers.storage import stack
+from LegoRL.buffers.storage import stack, Storage
 from LegoRL.targets.maxtrace import MaxTrace
 
 import torch
@@ -24,7 +24,7 @@ class GAE(MaxTrace):
         self.truncated_gae = truncated_gae
 
     @storage_cached("returns")
-    def returns(self, rollout):
+    def _rollout_returns(self, rollout):
         '''
         Calculates GAE return.
         input: RolloutStorage

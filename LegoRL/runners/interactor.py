@@ -14,17 +14,19 @@ class Interactor(RLmodule):
     Args:        
         threads - number of environments to create with make_envs, int
         policy - RLmodule with method "act" or None (random behavior will be used)
+        env_max_T - timer limit for environment; will not trigger done=True if limit is reached, int or None
 
     Provides:
         step - plays one step in env; returns Storage, rewards and lengths of finished episodes
         play - plays one episode; returns RolloutStorage
         act  - writes actions into given Storage; default behavior is random. 
     """
-    def __init__(self, threads=1, policy=None, *args, **kwargs):
+    def __init__(self, threads=1, policy=None, env_max_T=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.policy = Reference(policy or self)
         self._threads = threads
+        self.env_max_T = env_max_T
 
     def _initialize(self):
         if self.system.make_env is not None:
@@ -80,11 +82,12 @@ class Interactor(RLmodule):
             self._reset()
             raise Exception(f"Error during environment step. May be wrong action format? Last actions: {transitions.actions.numpy}")
         
-        transitions.update(rewards=r, next_states=self.ob, discounts=self.mdp.gamma * (1 - self.done))
-               
         self._id += 1 
         self.R += r
         self.T += 1
+
+        discounts = self.mdp.gamma * (1 - self.done * (self.T < self.env_max_T if self.env_max_T else 1))
+        transitions.update(rewards=r, next_states=self.ob, discounts=discounts)
         
         return transitions, info
 
@@ -126,9 +129,6 @@ class Interactor(RLmodule):
         
         self._rollout = self.mdp[RolloutStorage].from_list(self._rollout)               
         return self._rollout
-
-    def hyperparameters(self):
-        return {"num_envs": self.env.num_envs, "timer": self.timer}
 
     def __repr__(self):
         raise NotImplementedError()

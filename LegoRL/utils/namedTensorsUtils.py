@@ -37,3 +37,13 @@ from torch.nn.functional import one_hot
 def torch_one_hot(indexes, num_classes, new_name):
     names = indexes.names + (new_name,)
     return one_hot(indexes.rename(None), num_classes).refine_names(*names)
+
+def torch_index(data, index):
+    names = data.names
+    data = data.rename(None)
+    return data[index].refine_names(*names)
+
+def torch_min(t1, t2):
+    assert t1.names == t2.names
+    names = t1.names
+    return torch.min(t1.rename(None), t2.rename(None)).refine_names(*names)

@@ -21,16 +21,16 @@ class Visualizer(RLmodule):
     Basic logger visualizer
     
     Args:
-        reward_smoothing - additional reward smoothing, int or None
         points_limit - limit of points to draw on one plot, int
+        maxmin_points_limit - limit of points to draw for max-min-std plots, int
 
     Provides: visualize
     """
-    def __init__(self, timer=100, reward_smoothing=100, points_limit=1000, *args, **kwargs):
-        super().__init__(timer=timer, *args, **kwargs)
+    def __init__(self, timer=100, points_limit=500, maxmin_points_limit=100):
+        super().__init__(timer=timer)
 
-        self.reward_smoothing = reward_smoothing
         self.points_limit = points_limit
+        self.maxmin_points_limit = maxmin_points_limit
 
     def _visualize(self):
         """
@@ -59,22 +59,62 @@ class Visualizer(RLmodule):
             axes.append(plt.subplot((len(plots) + 1) // 2, 2, i + 1))
             plt.xlabel(plot_labels[0])
             plt.ylabel(plot_labels[1])
-            plt.grid()        
+            plt.grid()
+
+        min_y = [np.inf]*len(axes)
+        max_y = [-np.inf]*len(axes)       
         
-        for key, value in self.system.logger.items():
+        for key, values in self.system.logger.items():
             if key in self.system.logger_labels:
                 # id of plot in which we want to draw a line
-                ax = axes[plots[self.system.logger_labels[key]]]
+                plot_idx = plots[self.system.logger_labels[key]]
+                ax = axes[plot_idx]
 
                 # we do not want to draw many points
-                k = len(value) // self.points_limit + 1
-                value = np.array(value + [value[-1]] * ((k - len(value) % k) % k))
-                ax.plot(self.system.logger_times[key][::k], value.reshape(-1, k).mean(axis=1), label=key)
+                k = len(values) // self.points_limit + 1
+                smooth = smoothen(np.array(values + [values[-1]] * ((k - len(values) % k) % k)), k)[::k]
+                patch = ax.plot(self.system.logger_times[key][::k], smooth, lw=2, label=key)
                 ax.legend()
+
+                # sigma interval, min-max
+                if k > 1:
+                    k = len(values) // self.maxmin_points_limit + 1
+                    values = np.array(values + [values[-1]] * ((k - len(values) % k) % k))
+                    smooth = smoothen(values, k)[::k]
                 
-                # smoothing main plot!
-                if key == "rewards" and self.reward_smoothing is not None:
-                    ax.plot(self.system.logger_times[key][::k], sliding_average(value, self.reward_smoothing)[::k], label="smoothed rewards")
+                    sigma = values.reshape(-1, k).std(axis=1)
+                    ax.fill_between(self.system.logger_times[key][::k],  
+                                    smooth - sigma, 
+                                    smooth + sigma,
+                                    color=patch[0].get_color(), alpha=0.2)
+                    
+                    ax.plot(self.system.logger_times[key][::k], values.reshape(-1, k).min(axis=1), linestyle = "--", color=patch[0].get_color(), alpha=0.7)
+                    ax.plot(self.system.logger_times[key][::k], values.reshape(-1, k).max(axis=1), linestyle = "--", color=patch[0].get_color(), alpha=0.7)
+
+                # plot limits
+                q0 = min(smooth)
+                q1 = np.quantile(smooth, 0.1)
+                q2 = np.quantile(smooth, 0.9)
+                q3 = max(smooth)
+
+                q0 -= 0.02 * (q3 - q0)
+                q3 += 0.02 * (q3 - q0)
+
+                min_y[plot_idx] = min(max(q0, 2*q1 - q2), min_y[plot_idx])
+                max_y[plot_idx] = max(min(q3, 2*q2 - q1), max_y[plot_idx])
+
+                ax.set_ylim(min_y[plot_idx], max_y[plot_idx])
+                
+                # deprecated
+                # # we do not want to draw many points
+                # k = len(value) // self.points_limit + 1
+                # value = np.array(value + [value[-1]] * ((k - len(value) % k) % k))
+                # ax.plot(self.system.logger_times[key][::k], value.reshape(-1, k).mean(axis=1), label=key)
+                # ax.legend()
+                
+                # # smoothing main plot!
+                # if key == "rewards" and self.reward_smoothing is not None:
+                #     ax.plot(self.system.logger_times[key][::k], sliding_average(value, self.reward_smoothing)[::k], label="smoothed rewards")
         plt.show()
 
     def __repr__(self):

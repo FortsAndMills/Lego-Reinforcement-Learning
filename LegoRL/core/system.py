@@ -190,7 +190,7 @@ class System():
         f.close()
 
         # reading from personal files
-        self.agent._load(name)
+        self.agent._load(folder_name)
 
         # logging the fact that we were reloaded
         # it is important as, for example, replay buffers do not store their memory usually

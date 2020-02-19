@@ -13,7 +13,7 @@ class CriticLoss(Loss):
         sampler - RLmodule with "sample" method
         critic - RLmodule with "estimate" method
         target - RLmodule with "returns" method
-
+        
     Provides: loss, batch_loss
     """
     def __init__(self, sampler, critic, target):

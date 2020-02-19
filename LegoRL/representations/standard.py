@@ -14,6 +14,12 @@ class State(Representation):
     def rnames(cls):
         return tuple("observationI" + "I"*k for k in range(len(cls.mdp.observation_shape)))
 
+    # TODO: documentation? Think?
+    def raw_embedding(self):
+        return self.mdp[Embedding(self.rshape().numel())](self.tensor.flatten(list(self.rnames()), "features"))
+    def compare(self, other):
+        return self.raw_embedding().compare(other.raw_embedding())
+
     def __repr__(self):
         return "State Representation"
 

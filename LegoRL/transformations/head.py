@@ -1,6 +1,7 @@
 from LegoRL.core.RLmodule import RLmodule
 from LegoRL.core.reference import Reference
 from LegoRL.representations.standard import State
+from LegoRL.buffers.storage import Which
 from LegoRL.transformations.transformation import Transformation
 
 import torch
@@ -23,7 +24,7 @@ class Head(Transformation):
 
     def _initialize(self):
         if self.backbone is None:
-            self.backbone = lambda storage, which: storage.crop_states(which)
+            self.backbone = lambda storage, which=Which.current: storage.crop_states(which)
             self.backbone.output_representation = self.mdp[State]
         super()._initialize()
 
@@ -40,5 +41,5 @@ class Head(Transformation):
         return self.backbone(storage, which).tensor
 
     def __repr__(self):
-        connected = "connected to <{self.backbone.name}>, " if isinstance(self.backbone, RLmodule) else "" 
+        connected = f"connected to <{self.backbone.name}>, " if isinstance(self.backbone, RLmodule) else "" 
         return "Head, " + connected + f"modeling {self._output_representation._default_name()}"

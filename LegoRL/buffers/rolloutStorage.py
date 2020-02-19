@@ -61,10 +61,31 @@ class RolloutStorage(Storage):
             return self.all_states
         raise Exception("Error: 'which' marker is None?")
 
+    def batch(self, indices):
+        '''
+        Returns subset of transitions according to indices
+        input: indices - numpy array, ints
+        output: Storage
+        '''
+        return self.mdp[Storage](
+            states = self.all_states.batch(indices),
+            actions = self.actions.batch(indices),
+            rewards = self.rewards.batch(indices),
+            next_states = self.all_states.batch(indices + self.batch_size),
+            discounts = self.discounts.batch(indices)
+        )
+
+    def from_full_rollout(self, data):
+        return data
+
+    @property
+    def full_rollout(self):
+        return self
+
     # interface functions ----------------------------------------------------------------
     @property
     def rollout_length(self):
-        return self.all_states.rollout_length - 1
+        return self.all_states.rollout_length
 
     @property
     def batch_size(self):

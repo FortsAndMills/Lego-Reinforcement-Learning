@@ -10,7 +10,7 @@ class IntrinsicMotivation(RLmodule):
     Adds intrinsic motivation to the rewards from other runner.
     
     Args:
-        runner - RLmodule with "sample" method and "episodes_done" property.
+        runner - RLmodule with "sample" method, "done", "episodes_done" properties.
         motivations - list of RLmodules with "curiosity" method.
         coeffs - weight of intrinsic reward, float.
         regime - "add", "replace", "stack", str
@@ -35,9 +35,6 @@ class IntrinsicMotivation(RLmodule):
 
         self._last_seen_id = None
         self.intrinsic_R = [0]*len(self.motivations)
-        
-    def _iteration(self):
-        self.sample(existed=False)
 
     def sample(self, existed=True):
         '''
@@ -47,10 +44,9 @@ class IntrinsicMotivation(RLmodule):
         if self._performed:
             self.debug("returns same sample.")
             return self._sample
-        if existed: return None
         self._performed = True
         
-        storage = self.runner.sample(existed=False)
+        storage = self.runner.sample(existed=existed)
         if storage is None:
             self.debug("no new observations found, no observation generated.")
             self._sample = None
@@ -79,12 +75,12 @@ class IntrinsicMotivation(RLmodule):
             self.intrinsic_R[i] += ir
             self._last_seen_id = storage.id
 
-            episodes_done = self.runner.episodes_done - sum(storage.discounts.numpy == 0)
-            for res in self.intrinsic_R[i][storage.discounts.numpy == 0]:
+            episodes_done = self.runner.episodes_done - sum(self.runner.done)
+            for res in self.intrinsic_R[i][self.runner.done]:
                 episodes_done += 1
                 self.log(self.motivations[i].name + " curiosity", res, "reward", "episode", episodes_done)
                 
-            self.intrinsic_R[i][storage.discounts.numpy == 0] = 0
+            self.intrinsic_R[i][self.runner.done] = 0
 
         # returning updated transitions
         self._sample = copy(storage)
