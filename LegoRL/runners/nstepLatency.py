@@ -24,20 +24,21 @@ class NstepLatency(RLmodule):
         self._last_seen_id = None
 
     def _iteration(self):
-        self.sample(existed=False)
+        self.sample(trigger=True)
 
-    def sample(self, existed=True):
+    def sample(self, trigger=False):
         '''
         Stores observation in buffer and pops n-step transition as observation
+        input: trigger - if False, sample will be returned only if it already exists
         output: Storage
         '''
         if self._performed:
             self.debug("returns same transitions.")
             return self._sample
-        if existed: return None
+        if not trigger: return None
         self._performed = True
 
-        storage = self.runner.sample(existed=False)
+        storage = self.runner.sample(trigger=True)
         if storage is None:
             self.debug("no new observations found, no observation generated.")
             self._sample = None

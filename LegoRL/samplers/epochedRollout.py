@@ -29,11 +29,13 @@ class EpochedRollout(RLmodule):
         self._sampler_idx = 0
         self._epochs_cnt = 0
 
-    def sample(self):
+    def sample(self, trigger=True):
         """
         Samples mini-batches from collected rollouts.
-        output: Batch
+        input: trigger - if False, sample will be returned only if it already exists
+        output: Storage
         """
+        assert trigger
         if self._performed:
             self.debug("returns same sample.")
             return self._sample

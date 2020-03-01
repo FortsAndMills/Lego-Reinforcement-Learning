@@ -27,11 +27,13 @@ class SamplerBiasCorrection(RLmodule):
 
         self._sample = None
 
-    def sample(self):
+    def sample(self, trigger=True):
         '''
         Returns a sample of batches.
+        input: trigger - if False, sample will be returned only if it already exists
         output: Storage
         '''
+        assert trigger
         if self._performed:
             self.debug("returns same sample")
             return self._sample

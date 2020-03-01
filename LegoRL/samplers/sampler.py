@@ -37,11 +37,14 @@ class Sampler(RLmodule):
         self._sample = self.mdp[Storage].from_list(transitions)
         return self._sample
 
-    def sample(self):
+    def sample(self, trigger=True):
         """
         Checks if cold start condition is satisfied and samples a mini-batch.
+        input: existed - bool   TODO: WTF
         output: Storage
         """
+        assert trigger
+
         if self._performed:
             self.debug("returns same sample.")
             return self._sample

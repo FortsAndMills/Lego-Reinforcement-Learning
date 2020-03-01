@@ -1,4 +1,4 @@
-from LegoRL.utils.namedTensorsUtils import torch_unflatten, torch_index
+from LegoRL.utils.namedTensorsUtils import torch_unflatten, torch_index, torch_stack
 
 import torch
 import numpy as np
@@ -160,21 +160,29 @@ class Representation():
         return type(self)(torch_index(data, indices))
 
     def append(self, last):
-        return type(self)(torch.cat([self.tensor, last.tensor.align_as(self.tensor)], "timesteps"))            
+        '''
+        TODO: ?!?
+        '''
+        if "timesteps" in self.tensor.names:
+            return type(self)(torch.cat([self.tensor, last.tensor.align_as(self.tensor)], "timesteps"))
+        # TODO: copied from stack function!
+        return type(self)(torch_stack([self.tensor, last.tensor], 0, "timesteps"))            
 
-    def crop(self, which):
+    # TODO: think
+    def crop(self, which, original_type="rollout"):
+        assert original_type in ["rollout", "storage"]
         if which is Which.current:
-            if self._chained:
+            if original_type == "rollout":
+                return type(self)(self.tensor[:-1])
+            else:
                 assert self.rollout_length == 1
                 return type(self)(self.tensor[0])
-            else:
-                return type(self)(self.tensor[:-1])
         if which is Which.next:
-            if self._chained:
+            if original_type == "rollout":
+                return type(self)(self.tensor[1:])
+            else:
                 assert self.rollout_length == 1
                 return type(self)(self.tensor[1])
-            else:
-                return type(self)(self.tensor[1:])
         if which is Which.last:
             return type(self)(self.tensor[-1])
         raise Exception("Error: crop issue")

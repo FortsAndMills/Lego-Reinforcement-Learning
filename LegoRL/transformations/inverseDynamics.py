@@ -22,10 +22,10 @@ class InverseDynamics(Head):
     def _get_input(self, storage, which):
         output = self.backbone(storage, Which.all)
 
-        states = output.crop(Which.current).tensor
+        states = output.crop(Which.current, storage.storage_type).tensor
         states = states.rename(**{states.names[-1]: "features"})
 
-        next_states = output.crop(Which.next).tensor
+        next_states = output.crop(Which.next, storage.storage_type).tensor
         next_states = next_states.rename(**{next_states.names[-1]: "features"})
 
         return torch.cat([states, next_states], dim="features")

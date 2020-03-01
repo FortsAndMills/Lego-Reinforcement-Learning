@@ -29,7 +29,7 @@ class Loss(RLmodule):
         Calculates loss for batch from sampler
         output: Tensor, scalar.
         '''
-        batch = self.sampler.sample()
+        batch = self.sampler.sample(trigger=True)
         if batch is None:
             self.debug("no batch is found, loss is None.")
             return

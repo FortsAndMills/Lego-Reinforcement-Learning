@@ -93,7 +93,9 @@ def Embedding(size=0, emb_name="Embedding"):
             cmp = (self.tensor - other.tensor)**2
             return self.mdp["Loss"](cmp.sum(dim="features") if self.embedding_size else cmp)
 
+        # TODO: error, for loss it is not working
         @classmethod
         def _default_name(cls):
             return emb_name + f" of size {cls.embedding_size}" if cls.embedding_size else ""
+    
     return Embedding

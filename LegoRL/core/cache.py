@@ -26,7 +26,7 @@ def cached_forward(forward):
                 return storage[key]
             elif self.name + suffix(Which.all) in storage:
                 self.debug(f"reused{suffix(which)} from cache (used all)!")
-                return storage[self.name + suffix(Which.all)].crop(which)
+                return storage[self.name + suffix(Which.all)].crop(which, storage.storage_type)
             elif which is Which.all and self.name + suffix(Which.current) in storage:
                 self.debug(f"needs all, and current is in cache; will compute only for last")
                 output_current = storage[self.name + suffix(Which.current)]

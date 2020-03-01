@@ -68,6 +68,7 @@ class RolloutStorage(Storage):
         output: Storage
         '''
         return self.mdp[Storage](
+            full_rollout = self,
             states = self.all_states.batch(indices),
             actions = self.actions.batch(indices),
             rewards = self.rewards.batch(indices),
@@ -81,6 +82,11 @@ class RolloutStorage(Storage):
     @property
     def full_rollout(self):
         return self
+
+    # TODO: think
+    @property
+    def storage_type(self):
+        return "rollout"
 
     # interface functions ----------------------------------------------------------------
     @property

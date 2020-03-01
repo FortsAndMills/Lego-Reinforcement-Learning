@@ -36,9 +36,10 @@ class IntrinsicMotivation(RLmodule):
         self._last_seen_id = None
         self.intrinsic_R = [0]*len(self.motivations)
 
-    def sample(self, existed=True):
+    def sample(self, trigger=False):
         '''
         Adds intrinsic motivation to samples from runner.
+        input: trigger - if False, sample will be returned only if it already exists
         output: Storage
         '''
         if self._performed:
@@ -46,7 +47,7 @@ class IntrinsicMotivation(RLmodule):
             return self._sample
         self._performed = True
         
-        storage = self.runner.sample(existed=existed)
+        storage = self.runner.sample(trigger=trigger)
         if storage is None:
             self.debug("no new observations found, no observation generated.")
             self._sample = None
@@ -67,20 +68,23 @@ class IntrinsicMotivation(RLmodule):
         intrinsic_rewards = 0
         for i in range(len(self.motivations)):
             ir = self.coeffs[i] * self.motivations[i].curiosity(storage).numpy
-            intrinsic_rewards += ir
+            
+            # TODO: think
+            if hasattr(storage, "id"):
+                intrinsic_rewards += ir
 
-            # logging intrinsic rewards
-            if storage.id - 1 != self._last_seen_id:
-                self.intrinsic_R[i] = np.zeros((storage.batch_size), dtype=np.float32)
-            self.intrinsic_R[i] += ir
-            self._last_seen_id = storage.id
+                # logging intrinsic rewards
+                if storage.id - 1 != self._last_seen_id:
+                    self.intrinsic_R[i] = np.zeros((storage.batch_size), dtype=np.float32)
+                self.intrinsic_R[i] += ir
+                self._last_seen_id = storage.id
 
-            episodes_done = self.runner.episodes_done - sum(self.runner.done)
-            for res in self.intrinsic_R[i][self.runner.done]:
-                episodes_done += 1
-                self.log(self.motivations[i].name + " curiosity", res, "reward", "episode", episodes_done)
-                
-            self.intrinsic_R[i][self.runner.done] = 0
+                episodes_done = self.runner.episodes_done - sum(self.runner.done)
+                for res in self.intrinsic_R[i][self.runner.done]:
+                    episodes_done += 1
+                    self.log(self.motivations[i].name + " curiosity", res, "reward", "episode", episodes_done)
+                    
+                self.intrinsic_R[i][self.runner.done] = 0
 
         # returning updated transitions
         self._sample = copy(storage)

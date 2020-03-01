@@ -22,17 +22,19 @@ class RolloutCollector(RLmodule):
         self._sample = None
         self._last_seen_id = None
 
-    def sample(self):
+    def sample(self, trigger=True):
         """
         Adds transitions from runner to rollout and creates a sample if desired length is reached.
+        input: trigger - if False, sample will be returned only if it already exists
         output: RolloutStorage
         """
+        assert trigger
         if self._performed:
             self.debug("returns same sample.")
             return self._sample
         self._performed = True
 
-        runner_sample = self.runner.sample(existed=False)
+        runner_sample = self.runner.sample(trigger=True)
         if runner_sample is None:
             self.debug("no new observations found, resetting rollout.")
             self._sample = None

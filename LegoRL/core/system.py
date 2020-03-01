@@ -128,11 +128,13 @@ class System():
             self.log("time", time.time() - start, "seconds")
             
             # visualizing
+            start = time.time()
             self.agent.visualize()
 
             # saving
             if self.folder_name is not None and self.iterations % self.save_timer == 0:
                 self.save(self.folder_name)
+            self.log("visualization time", time.time() - start)
 
         self.debug_on = False
 
@@ -142,6 +144,13 @@ class System():
         output: float
         """
         return sum(self.logger["time"])
+    
+    def viz_wallclock(self):
+        """
+        Returns time in seconds spent for visualization and saving.
+        output: float
+        """
+        return sum(self.logger["visualization time"])
     
     # saving and loading functions
     def save(self, folder_name=None):

@@ -79,9 +79,7 @@ class Storage(dict):
         if which is Which.last:
             return self.next_states
         if which is Which.all:
-            chained = stack([self.states, self.next_states])
-            chained._chained = True
-            return chained
+            return stack([self.states, self.next_states])
         raise Exception("Error: 'which' marker is None?")
 
     def average(self, name):        
@@ -115,6 +113,11 @@ class Storage(dict):
     # TODO: think
     def from_full_rollout(self, data):
         return data.batch(self.indices)
+
+    # TODO: think
+    @property
+    def storage_type(self):
+        return "storage"
 
     # interface functions ----------------------------------------------------------------
     @property

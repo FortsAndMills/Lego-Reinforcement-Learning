@@ -31,16 +31,16 @@ class Runner(Interactor):
         self.episodes_done = 0
         self._sample = None
 
-    def sample(self, existed=True):
+    def sample(self, trigger=False):
         """
         Makes one step and logs results.
-        input: existed - bool, if True transitions will be returned only if they exist already
+        input: trigger - if False, sample will be returned only if it already exists
         output: Storage
         """
         if self._performed:
             self.debug("returns same sample.")
             return self._sample
-        if existed: return None
+        if not trigger: return None
         self._performed = True
 
         self.debug("plays one step.", open=True)
@@ -67,7 +67,7 @@ class Runner(Interactor):
 
     def _iteration(self):
         # triggers one step in environment.
-        self.sample(existed=False)
+        self.sample(trigger=True)
 
     def hyperparameters(self):
         return {"timer": self.timer,

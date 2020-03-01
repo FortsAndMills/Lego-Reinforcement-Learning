@@ -1,6 +1,5 @@
 TODO:
 - [bug]: frames are empty, no videos?
-- [bug]: unity +2
 - [add]: nn.init?
 - [add]: multi-reward support
 - [add]: recurrent network support
@@ -21,5 +20,7 @@ TODO:
 - [add]: TD3
 - [add]: several-envs-per-core test
 - [add]: CEM
-- [bug]: noisy linear does not work as an actor with deterministic envs.
 - [add]: decorrelator for timer-based environments
+- [bug]: noisy linear does not work as an actor with deterministic envs.
+- [infra]: visualization takes a lot of time warning
+- [infra]: parallel visualization?

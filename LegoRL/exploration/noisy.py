@@ -43,3 +43,31 @@ def NoisyLinear(std_init=0.4):
             # returns summed magnitudes of noise and number of noisy parameters
             return (self.sigma_weight.abs().sum() + self.sigma_bias.abs().sum()).detach().cpu().numpy(), self.n_params
     return NoisyLinear
+
+def NoisyLinearRT(std_init=0.4):
+    class NoisyLinearRT(nn.Linear):
+        """
+        Adds noise to output of layer to reduce number of parameters!
+        Should still work as Noisy Net exploration technique
+        """
+        
+        def __init__(self, in_features, out_features):
+            super(NoisyLinearRT, self).__init__(in_features, out_features)
+            
+            self.n_params = out_features
+
+            self.sigmas = nn.Parameter(torch.FloatTensor(out_features).fill_(std_init))
+            self.register_buffer("epsilon", torch.zeros(out_features))
+        
+        def forward(self, x):
+            x = super().forward(x)
+            if self.training:
+                torch.randn(self.epsilon.size(), out=self.epsilon)
+                x = x + self.sigmas * self.epsilon
+            
+            return x
+        
+        def magnitude(self):
+            # returns summed magnitudes of noise and number of noisy parameters
+            return self.sigmas.abs().sum().detach().cpu().numpy(), self.n_params
+    return NoisyLinearRT

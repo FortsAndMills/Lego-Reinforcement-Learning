@@ -23,7 +23,7 @@ class Backbone(Transformation):
         return self.mdp[self._output_representation]
 
     def _get_input(self, storage, which):
-        return storage.crop_states(which).tensor  
+        return storage.crop_states(which).tensor
 
     def __repr__(self):
         return f"Feature extractor network"
