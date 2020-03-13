@@ -2,6 +2,7 @@ from LegoRL.representations.standard import Embedding
 
 import gym
 import torch
+import numpy as np
 from LegoRL.utils.namedTensorsUtils import torch_one_hot
 
 class MDPconfig():
@@ -31,7 +32,7 @@ class MDPconfig():
             self.action_description_shape = (self.num_actions,)
             self.action_preprocessing = lambda actions: torch_one_hot(actions, self.num_actions, "features").float()
             self.ActionTensor = self.LongTensor
-        elif isinstance(env.action_space, gym.spaces.Continuous):
+        elif isinstance(env.action_space, gym.spaces.Box):
             self.space = "continuous"
             self.num_actions = np.array(env.action_space.shape).prod()
             self.action_shape = env.action_space.shape

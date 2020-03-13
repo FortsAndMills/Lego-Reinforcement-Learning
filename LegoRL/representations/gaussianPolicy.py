@@ -14,11 +14,21 @@ class GaussianPolicy(Representation):
         Returns torch.Distribution policy
         output: torch.Normal
         '''
-        mu = self.tensor.get(index=0, dim="musigma")
-        sigma = F.softplus(self.tensor.get(index=1, dim="musigma"))
-        
         # PyTorch NamedTensor issues again...
-        return Normal(mu.rename(None), sigma.rename(None))
+        mu = F.tanh(self.tensor.align_to("musigma", ...)[0].rename(None))
+        sigma = F.softplus(self.tensor.align_to("musigma", ...)[1].rename(None))
+        
+        return Normal(mu, sigma)
+
+    # TODO
+    def log_prob(self, actions):
+        component_prob = self.distribution.log_prob(actions)
+        return component_prob.sum(-1)
+
+    # TODO
+    def entropy(self):
+        component_entr = self.distribution.entropy()
+        return component_entr.sum(-1)
 
     def __getattr__(self, name):
         return getattr(self.distribution, name)
@@ -29,7 +39,7 @@ class GaussianPolicy(Representation):
 
     @classmethod
     def rnames(cls):
-        return ("musigma",) + ("actionsI" + "I"*k for k in range(len(cls.mdp.action_shape)))
+        return ("musigma",) + tuple("actionsI" + "I"*k for k in range(len(cls.mdp.action_shape)))
 
     @classmethod
     def _default_name(cls):   

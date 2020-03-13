@@ -105,16 +105,6 @@ class Visualizer(RLmodule):
 
                 ax.set_ylim(min_y[plot_idx], max_y[plot_idx])
                 
-                # deprecated
-                # # we do not want to draw many points
-                # k = len(value) // self.points_limit + 1
-                # value = np.array(value + [value[-1]] * ((k - len(value) % k) % k))
-                # ax.plot(self.system.logger_times[key][::k], value.reshape(-1, k).mean(axis=1), label=key)
-                # ax.legend()
-                
-                # # smoothing main plot!
-                # if key == "rewards" and self.reward_smoothing is not None:
-                #     ax.plot(self.system.logger_times[key][::k], sliding_average(value, self.reward_smoothing)[::k], label="smoothed rewards")
         plt.show()
 
     def __repr__(self):

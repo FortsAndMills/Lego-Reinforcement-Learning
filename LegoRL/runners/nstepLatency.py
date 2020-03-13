@@ -23,9 +23,6 @@ class NstepLatency(RLmodule):
         self.nstep_buffer = []
         self._last_seen_id = None
 
-    def _iteration(self):
-        self.sample(trigger=True)
-
     def sample(self, trigger=False):
         '''
         Stores observation in buffer and pops n-step transition as observation
@@ -35,10 +32,9 @@ class NstepLatency(RLmodule):
         if self._performed:
             self.debug("returns same transitions.")
             return self._sample
-        if not trigger: return None
         self._performed = True
 
-        storage = self.runner.sample(trigger=True)
+        storage = self.runner.sample(trigger=trigger)
         if storage is None:
             self.debug("no new observations found, no observation generated.")
             self._sample = None
