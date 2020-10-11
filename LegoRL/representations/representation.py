@@ -1,10 +1,10 @@
-from LegoRL.utils.namedTensorsUtils import torch_unflatten, torch_index, torch_stack
+from LegoRL.utils.namedTensorsUtils import torch_unflatten, torch_index, torch_stack, torch_set_index
 
 import torch
 import numpy as np
 
-from enum import Enum
-Which = Enum('Which', 'current next last all')
+#from enum import Enum
+#Which = Enum('Which', 'current next last all')
 
 '''
 Representations are tensors for such entities like states, actions, value functions, policies, etc.
@@ -21,7 +21,7 @@ MultiReward - adds "rewards" dimension
 MultiGamma - adds "discounts" dimension
 and they can be combined in complex variations.
 
-Representations are used as inputs and outputs for Transformation modules in this framework.
+Representations are used as inputs and outputs for Model modules in this framework.
 '''
 
 class Representation():
@@ -36,13 +36,14 @@ class Representation():
         numpy - data in Numpy format
     '''
     def __init__(self, data):
+        assert not isinstance(data, Representation)
+
         # translating to numpy lists and tuples
-        if isinstance(data, tuple) or isinstance(data, list):
+        if isinstance(data, tuple) or isinstance(data, list) or np.isscalar(data):
             data = np.array(data)
         
         # shape / names checking
         full_name = self._parse_batch_dims(data)
-        self._chained = False
         
         # storing data
         if isinstance(data, np.ndarray):
@@ -62,7 +63,7 @@ class Representation():
         tensor = tensor.refine_names(..., "features")
         tensor = torch_unflatten(tensor, "features", zip(cls.rnames(), cls.rshape()))
         
-        return cls(tensor)    
+        return cls(tensor)
 
     def _parse_batch_dims(self, data):
         '''
@@ -75,18 +76,19 @@ class Representation():
 
         names = self.rnames()
         extra_dims = len(data.shape) - len(names)
+        assert extra_dims <= 2, "ERROR: Weird batch shape"
+
         if extra_dims == 0:
             self.batch_size = 1
-            self.rollout_length = 0
+            self.rollout_length = 1
         if extra_dims == 1:
             names = ("batch",) + names
             self.batch_size = data.shape[0]
-            self.rollout_length = 0
+            self.rollout_length = 1
         if extra_dims == 2:
             names = ("timesteps", "batch") + names
             self.batch_size = data.shape[1]
-            self.rollout_length = data.shape[0] - 1
-        assert extra_dims <= 2, "ERROR: Weird batch shape"
+            self.rollout_length = data.shape[0]
         return names
 
     # Numpy - PyTorch translations all done here:
@@ -112,6 +114,7 @@ class Representation():
     def numpy(self, data):
         self._numpy = data
         if hasattr(self, "_tensor"):
+            assert not self._tensor.requires_grad
             del self._tensor
 
     @tensor.setter
@@ -141,14 +144,9 @@ class Representation():
         raise NotImplementedError()
     
     # interface functions ----------------------------------------------------------------
-    def __getitem__(self, idx):
-        '''
-        ? TODO
-        '''
-        # NamedTensors issue
-        if isinstance(idx, np.ndarray):
-            return type(self)(torch_index(self.tensor, idx))
-        return type(self)(self.tensor[idx])
+    @property
+    def total_size(self):
+        return self.batch_size * self.rollout_length
 
     def batch(self, indices):
         '''
@@ -161,31 +159,130 @@ class Representation():
 
     def append(self, last):
         '''
-        TODO: ?!?
+        Adds one row along "timesteps" axis
+        input: last - Representation
+        output: Representation
         '''
         if "timesteps" in self.tensor.names:
             return type(self)(torch.cat([self.tensor, last.tensor.align_as(self.tensor)], "timesteps"))
-        # TODO: copied from stack function!
-        return type(self)(torch_stack([self.tensor, last.tensor], 0, "timesteps"))            
+        return type(self)(torch_stack([self.tensor, last.tensor], 0, "timesteps"))
 
-    # TODO: think
-    def crop(self, which, original_type="rollout"):
-        assert original_type in ["rollout", "storage"]
-        if which is Which.current:
-            if original_type == "rollout":
-                return type(self)(self.tensor[:-1])
+    def detach(self):
+        self.tensor = self.tensor.detach()
+        return self
+
+    def clamp(self, low, high):
+        return type(self)(torch.clamp(self.tensor, low, high))
+
+    def __getitem__(self, idx):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor"):
+            if isinstance(idx, Representation):
+                return type(self)(self.numpy[idx.numpy])
             else:
-                assert self.rollout_length == 1
-                return type(self)(self.tensor[0])
-        if which is Which.next:
-            if original_type == "rollout":
-                return type(self)(self.tensor[1:])
+                return type(self)(self.numpy[idx])
+        elif isinstance(idx, Representation):
+            return type(self)(torch_index(self.tensor, idx.tensor))
+        elif isinstance(idx, np.ndarray):
+            return type(self)(torch_index(self.tensor, idx))      
+        return type(self)(self.tensor[idx])
+
+    def __setitem__(self, idx, value):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor"):
+            if isinstance(idx, Representation):
+                idx = idx.numpy
+
+            if isinstance(value, Representation):
+                self.numpy[idx] = value.numpy
             else:
-                assert self.rollout_length == 1
-                return type(self)(self.tensor[1])
-        if which is Which.last:
-            return type(self)(self.tensor[-1])
-        raise Exception("Error: crop issue")
+                self.numpy[idx] = value
+        elif isinstance(value, Representation):
+            self.tensor = torch_set_index(self.tensor, idx, value.tensor)
+        else:
+            self.tensor = torch_set_index(self.tensor, idx, value)
+
+    def __iadd__(self, other):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor") or isinstance(other, np.ndarray):
+            if isinstance(other, Representation):
+                self.numpy += other.numpy
+            else:
+                self.numpy += other
+        elif isinstance(other, Representation):
+            self.tensor += other.tensor
+        else:
+            self.tensor += other
+        return self
+
+    def __imul__(self, other):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor") or isinstance(other, np.ndarray):
+            if isinstance(other, Representation):
+                self.numpy *= other.numpy
+            else:
+                self.numpy *= other
+        elif isinstance(other, Representation):
+            self.tensor *= other.tensor
+        else:
+            self.tensor *= other
+        return self
+
+    def __mul__(self, other):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor") or isinstance(other, np.ndarray):
+            if isinstance(other, Representation):
+                return type(self)(self.numpy * other.numpy)
+            else:
+                return type(self)(self.numpy * other)
+        elif isinstance(other, Representation):
+            return type(self)(self.tensor * other.tensor)
+        else:
+            return type(self)(self.tensor * other)
+        return self
+
+    def __add__(self, other):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor") or isinstance(other, np.ndarray):
+            if isinstance(other, Representation):
+                return type(self)(self.numpy + other.numpy)
+            else:
+                return type(self)(self.numpy + other)
+        elif isinstance(other, Representation):
+            return type(self)(self.tensor + other.tensor)
+        else:
+            return type(self)(self.tensor + other)
+        return self
+
+    def __sub__(self, other):
+        '''
+        TODO
+        '''
+        if not hasattr(self, "_tensor") or isinstance(other, np.ndarray):
+            if isinstance(other, Representation):
+                return type(self)(self.numpy - other.numpy)
+            else:
+                return type(self)(self.numpy - other)
+        elif isinstance(other, Representation):
+            return type(self)(self.tensor - other.tensor)
+        else:
+            return type(self)(self.tensor - other)
+        return self
+
+    __rmul__ = __mul__
+    __radd__ = __add__
 
     @classmethod
     def _default_name(cls):
@@ -193,4 +290,4 @@ class Representation():
         return cls.__name__
 
     def __repr__(self):
-        return self._default_name()
+        return f"{self._default_name()} {self.numpy.shape}"

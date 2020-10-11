@@ -1,70 +1,80 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.reference import Reference
+from LegoRL.buffers.storage import Storage
+
+import numpy as np
+from collections import defaultdict
 
 class ReplayBuffer(RLmodule):
     """
-    Replay Memory storing all transitions from runner.
+    Replay Memory storing data in raw numpy format.
+    Used for experience replay.
     
     Args:
-        runner - RLmodule with "sample" method
         capacity - size of buffer, int
 
     Provides:
-        buffer - list of Transition
-        buffer_pos - int
-        __len__ - function, returns size of buffer
-        capacity - int
+        store - add data from Storage to buffer
+        at - get data by indices
     """
-    def __init__(self, runner, capacity=10000, frozen=False):
-        super().__init__(frozen=frozen)
-
-        self.runner = Reference(runner)
-        self.capacity = capacity
+    def __init__(self, par, capacity=10000):
+        super().__init__(par)
         
-        self.buffer = []
-        self.buffer_pos = 0
-        self._last_seen_id = None
+        self.capacity = capacity        
+        self._buffer = defaultdict(list)
+        self._buffer_pos = 0
+        self._size = 0
+        self._types = None
     
-    def _store_transition(self, transition):
+    def _store_transition(self, storage):
         """
-        Remembers given transition.
-        input: Transition
+        Remembers single transition.
+        input: Storage
+        output: index of storing, int
         """
-        # this seems to be the quickest way of working with experience memory
-        if len(self) < self.capacity:
-            self.buffer.append(transition)
+        if self._size < self.capacity:
+            self._size += 1
+            for name, data in storage.items():
+                self._buffer[name].append(data.numpy)
         else:
-            self.buffer[self.buffer_pos] = transition
+            for name, data in storage.items():
+                self._buffer[name][self._buffer_pos] = data.numpy
         
-        self.buffer_pos = (self.buffer_pos + 1) % self.capacity
+        idx = self._buffer_pos
+        self._buffer_pos = (self._buffer_pos + 1) % self.capacity
+        return idx
         
-    def iteration(self):
+    def store(self, storage):
         """
-        Collects new observations from runner.
-        """   
-        storage = self.runner.sample()
-        if storage is None:
-            self.debug("no new observations found.")
-            return
+        Remembers given transitions.
+        input: Storage
+        output: index of storing, list of ints
+        """
+        if self._types is None:
+            self._types = storage.types()
+        else:
+            assert self._types == storage.types(), f"Error: Replay Buffer expected scheme {self._types}; received scheme {storage.types()}"
 
-        self.debug("adds new observations from runner.")
-        for transition in storage.transitions():
-            # saving memory by not storing same state twice
-            # we can do that if storage's id is following previous id
-            # and provided transitions go one after another (n_steps = 1)
-            if ((not hasattr(storage, "n_steps") or storage.n_steps == 1) and
-                storage.id - 1 == self._last_seen_id):
-                transition.state = self.buffer[self.buffer_pos - len(storage)].next_state
-            self._last_seen_id = storage.id
+        idxs = []
+        for transition in storage.transitions():              
+            idxs.append(self._store_transition(transition))
+        return idxs
 
-            # storing transition                
-            self._store_transition(transition)
+    def at(self, indices):
+        """
+        Returns storage with data on given indices
+        input: indices - list of ints
+        output: Storage
+        """
+        return Storage({
+            name: ty(np.stack([self._buffer[name][i] for i in indices])) 
+            for name, ty in self._types.items()
+        })
+
+    def __len__(self):
+        return self._size
 
     def hyperparameters(self):
-        return {"capacity": self.capacity}
-        
-    def __len__(self):
-        return len(self.buffer)
+        return {"capacity": self.capacity}        
 
     def __repr__(self):
-        return f"Stores observations from <{self.runner.name}>"
+        return f"Stores data in raw numpy format"

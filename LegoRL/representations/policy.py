@@ -1,50 +1,45 @@
 from LegoRL.representations.representation import Representation
-
-import torch
-import torch.nn.functional as F
-from torch.distributions import Categorical
+from LegoRL.representations.standard import Action
 
 class Policy(Representation):
     '''
-    FloatTensor representing policy, (*batch_shape x num_actions)
+    FloatTensor representing policy
     '''
     @property
     def distribution(self):
         '''
-        Returns torch.Distribution policy
-        output: torch.Categorical
+        output: torch.Distribution
         '''        
-        # PyTorch NamedTensor issues again...
-        return Categorical(logits=self.tensor.rename(None))
+        raise NotImplementedError()
 
-    @property
-    def proba(self):
+    def sample(self):
         '''
-        Returns torch.Distribution policy
-        output: Tensor, (*batch_shape, actions)
-        '''        
-        return F.softmax(self.tensor, "actions")
-
-    @classmethod
-    def uniform(cls):
+        output: Action
         '''
-        Constructs uniform policy
-        output: Policy
+        return self.mdp[Action](self.distribution.sample())
+
+    def rsample(self):
         '''
-        return cls(torch.ones(cls.mdp.num_actions, names=("actions",)).to(cls.mdp.device))
+        output: Action
+        '''
+        return self.mdp[Action](self.distribution.rsample())
 
-    def __getattr__(self, name):
-        return getattr(self.distribution, name)
-        
-    @classmethod
-    def rshape(cls):
-        return torch.Size([cls.mdp.num_actions])
+    def log_prob(self, actions):
+        '''
+        input: Action
+        output: FloatTensor
+        '''
+        #NamedTensors issue
+        component_prob = self.distribution.log_prob(actions.tensor.rename(None))
+        return component_prob
 
-    @classmethod
-    def rnames(cls):
-        return ("actions",)    
+    def entropy(self):
+        '''
+        output: FloatTensor
+        '''
+        component_entr = self.distribution.entropy()
+        return component_entr
 
-    @classmethod
-    def _default_name(cls): 
-        return 'Discrete Policy'
+    #def __getattr__(self, name):
+    #    return getattr(self.distribution, name)
 

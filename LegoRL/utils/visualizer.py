@@ -26,17 +26,19 @@ class Visualizer(RLmodule):
 
     Provides: visualize
     """
-    def __init__(self, timer=100, points_limit=500, maxmin_points_limit=100):
-        super().__init__(timer=timer)
+    def __init__(self, sys, timer=1000, points_limit=500, maxmin_points_limit=100):
+        super().__init__(sys)
 
+        self.timer = timer
         self.points_limit = points_limit
         self.maxmin_points_limit = maxmin_points_limit
 
-    def _visualize(self):
+    def visualize(self):
         """
         Draws plots with logs
         """
-        clear_output(wait=True)    
+        if self.system.iterations % self.timer != 0:
+            return
         
         # getting what plots do we want to draw
         coords = [self.system.logger_labels[key] for key in self.system.logger.keys() if key in self.system.logger_labels]
@@ -105,7 +107,8 @@ class Visualizer(RLmodule):
 
                 ax.set_ylim(min_y[plot_idx], max_y[plot_idx])
                 
-        plt.show()
+        clear_output(wait=True)    
+        plt.show(block=False)
 
     def __repr__(self):
         return f"Plots logs every {self.timer} iteration"

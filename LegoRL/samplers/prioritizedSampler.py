@@ -1,6 +1,5 @@
 from LegoRL.core.RLmodule import RLmodule
 from LegoRL.samplers.sampler import Sampler
-from LegoRL.buffers.storage import Storage
 
 import numpy as np
 
@@ -73,63 +72,60 @@ class PrioritizedSampler(Sampler):
     Based on: https://arxiv.org/abs/1511.05952
 
     Args:
-        replay - RLmodule with "buffer_pos", "buffer", "capacity" properties
         clip_priorities - float or None, clipping priorities as suggested in original paper
+        rp_alpha - smoothing of priorities
 
     Provides: sample, update_priorities
     """
-    def __init__(self, clip_priorities=1, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, par, replay, clip_priorities=1, rp_alpha=0.6, *args, **kwargs):
+        super().__init__(par, replay, *args, **kwargs)
         
-        self.previous_buffer_pos = 0        
+        self._previous_buffer_pos = 0        
         self.max_priority = 1.0
         self.clip_priorities = clip_priorities
-
-    def _initialize(self):        
+        self.rp_alpha = rp_alpha
         self.priorities = SumTree(self.replay.capacity)
 
-    def _iteration(self):
-        super()._iteration()
-
-        # new transitions are stored with max priority
-        while self.previous_buffer_pos != self.replay.buffer_pos:
-            self.debug("found new element in replay, stored with max priority.")
-            self.priorities.update(self.previous_buffer_pos, self.max_priority)
-            self.previous_buffer_pos = (self.previous_buffer_pos + 1) % self.replay.capacity        
-
-    def _generate_sample(self):
+    def sample(self):
         '''
         Samples batch using priorities.
         output: Storage
         '''
-        self.debug("samples new batch using priorities.")
+        if len(self.replay) < self.cold_start:
+            return None
 
         # sample batch_size indices
         batch_indices = np.array([self.priorities.get_leaf(np.random.uniform(0, self.priorities.total_p)) for _ in range(self.batch_size)])
         
         # get transitions with these indices
-        # seems like the fastest code for sampling!
-        transitions = [self.replay.buffer[idx] for idx in batch_indices]        
-        
-        self._sample = self.mdp[Storage].from_list(transitions)
+        self._sample = self.replay.at(batch_indices)
         self._sample.priorities = self.priorities[batch_indices]
         self._sample.indices = batch_indices
         return self._sample
 
-    def update_priorities(self, storage):
+    def expand(self, indices):
+        '''
+        Expand priorities with max priority
+        input: indices - numpy array, int
+        '''
+        for idx in indices:
+            self.priorities.update(idx, self.max_priority)
+
+    def update_priorities(self, indices, new_priorities):
         '''
         Updates priorities with batch_priorities for transition on indices from current sample.
-        input: Storage
+        input: indices - numpy array, int
+        input: new_priorities - Loss
         '''
-        new_batch_priorities = storage.new_priorities.numpy.clip(min=1e-5, max=self.clip_priorities)
-        for i, v in zip(storage.indices, new_batch_priorities):
+        new_priorities = (new_priorities.numpy ** self.rp_alpha).clip(min=1e-5, max=self.clip_priorities)
+        for i, v in zip(indices, new_priorities):
             self.priorities.update(i, v)
         
         # update max priority for new transitions
-        self.max_priority = max(self.max_priority, new_batch_priorities.max())
+        self.max_priority = max(self.max_priority, new_priorities.max())
 
     def hyperparameters(self):
-        return {"clip_priorities": self.clip_priorities}
+        return {"clip_priorities": self.clip_priorities, "rp_alpha": self.rp_alpha}
         
     def __repr__(self):
         return f"Samples mini-batch from <{self.replay.name}> using priorities"

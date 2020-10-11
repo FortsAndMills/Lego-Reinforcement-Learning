@@ -8,17 +8,19 @@ from LegoRL.utils.namedTensorsUtils import torch_one_hot
 class MDPconfig():
     """
     Stores parameters of MDP, i.e. state space, action space, reward space.
-    Some modules may introduce auxiliary MDPs with different parameters. 
         
     Args:
         env - gym environment
         gamma - discount factor, float from 0 to 1
     """
     def __init__(self, env, gamma=1):
+        # TODO: move EVERYTHING to system?!
+        # we are not going to dynamically change mdp! :(
         USE_CUDA = torch.cuda.is_available()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.FloatTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).float().cuda() if USE_CUDA else torch.tensor(*args, **kwargs).float()
         self.LongTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).cuda() if USE_CUDA else torch.tensor(*args, **kwargs)
+        self.BoolTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).cuda() if USE_CUDA else torch.tensor(*args, **kwargs)
         
         self.gamma = gamma
         self.observation_shape = env.observation_space.shape
@@ -31,6 +33,7 @@ class MDPconfig():
             self.action_shape = tuple()
             self.action_description_shape = (self.num_actions,)
             self.action_preprocessing = lambda actions: torch_one_hot(actions, self.num_actions, "features").float()
+            self.rescale_action = lambda actions: actions
             self.ActionTensor = self.LongTensor
         elif isinstance(env.action_space, gym.spaces.Box):
             self.space = "continuous"
@@ -38,6 +41,7 @@ class MDPconfig():
             self.action_shape = env.action_space.shape
             self.action_description_shape = self.action_shape
             self.action_preprocessing = lambda actions: actions
+            self.rescale_action = lambda actions: (actions + 1) * (env.action_space.high - env.action_space.low) / 2 + env.action_space.low
             self.ActionTensor = self.FloatTensor
         else:
             raise Exception("Error: this action space is not supported!")

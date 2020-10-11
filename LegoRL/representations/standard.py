@@ -14,19 +14,20 @@ class State(Representation):
     def rnames(cls):
         return tuple("observationI" + "I"*k for k in range(len(cls.mdp.observation_shape)))
 
-    # TODO: documentation? Think?
     def raw_embedding(self):
-        return self.mdp[Embedding(self.rshape().numel())](self.tensor.flatten(list(self.rnames()), "features"))
-    def compare(self, other):
-        return self.raw_embedding().compare(other.raw_embedding())
+        return self.mdp[Embedding(self.rshape().numel())](self.tensor.rename(...).flatten(list(self.rnames()), "features"))
+    
+    #def compare(self, other):
+    #    return self.raw_embedding().compare(other.raw_embedding())
 
-    def __repr__(self):
+    @classmethod
+    def _default_name(cls):   
         return "State Representation"
 
 class Action(Representation):
     '''
     Representation class for actions.
-    '''    
+    '''
     @classmethod
     def rshape(cls):
         return torch.Size(cls.mdp.action_shape)
@@ -35,11 +36,16 @@ class Action(Representation):
     def rnames(cls):
         return tuple("actionI" + "I"*k for k in range(len(cls.mdp.action_shape)))
 
+    def raw_embedding(self):
+        preprocess = self.mdp.action_preprocessing(self.tensor)
+        return self.mdp[Embedding(self.rshape().numel())](preprocess.rename(...).flatten(list(self.rnames()), "features"))
+
     @property
     def _TensorType(self):
         return self.mdp.ActionTensor
 
-    def __repr__(self):
+    @classmethod
+    def _default_name(cls):   
         return "Action Representation"
 
 class Reward(Representation):
@@ -54,7 +60,8 @@ class Reward(Representation):
     def rnames(cls):
         return tuple()
 
-    def __repr__(self):
+    @classmethod
+    def _default_name(cls):   
         return "Reward Representation"
 
 class Discount(Representation):
@@ -69,8 +76,29 @@ class Discount(Representation):
     def rnames(cls):
         return tuple()
 
-    def __repr__(self):
+    @classmethod
+    def _default_name(cls):   
         return "Discount Representation"
+
+class Flag(Representation):
+    '''
+    Representation class for flags.
+    '''    
+    @classmethod
+    def rshape(cls):
+        return torch.Size([])
+
+    @classmethod
+    def rnames(cls):
+        return tuple()
+
+    @property
+    def _TensorType(self):
+        return self.mdp.BoolTensor
+
+    @classmethod
+    def _default_name(cls):   
+        return "Flag Representation"
 
 def Embedding(size=0, emb_name="Embedding"):
     '''

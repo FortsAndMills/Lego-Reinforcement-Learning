@@ -10,9 +10,6 @@ from itertools import count
 class Runner(Interactor):
     """
     Performs interaction step-by-step with logging of results.
-    By default, performs one step each iteration.
-    This can be modified using timer parameter or turned off by setting frozen=False.
-    The last will lead to performing steps only when required by other modules.
 
     Args:
         log_info - which values from info to log, list of tuples (key, y_axis):
@@ -20,59 +17,41 @@ class Runner(Interactor):
             y_axis - name of y-axis for this log, str or None
 
     Provides:
-        sample - returns Storage with transitions from interaction.
+        step - returns Storage with transitions from one step of interaction.
     """
-    def __init__(self, log_info=[], *args, **kwargs):
+    def __init__(self, *args, log_info=[], **kwargs):
         super().__init__(*args, **kwargs)
 
         self.log_info = log_info
-
         self.frames_done = 0
         self.episodes_done = 0
-        self._sample = None
 
-    def sample(self, trigger=False):
+    def step(self, actions):
         """
         Makes one step and logs results.
-        input: trigger - if False, sample will be returned only if it already exists
+        input: actions - Action
+        input: keys - list of str
         output: Storage
         """
-        if self._performed:
-            self.debug("returns same sample.")
-            return self._sample
-        if not trigger: return None
-        self._performed = True
-
-        self.debug("plays one step.", open=True)
-
         start = time.time()
-        self._sample, info = self.step()
+        storage = self._perform_step(actions)
         self.log("playing time", time.time() - start, "seconds")
-
-        self.debug(close=True)
         
         self.frames_done += self.env.num_envs
         for i in range(self.env.num_envs):
             if self.done[i]:
                 self.episodes_done += 1
 
-                self.log("rewards", self.R[i], "reward", "episode", self.episodes_done)
-                self.log("lengths", self.T[i], "length", "episode", self.episodes_done)
+                self.log("rewards", self.R.numpy[i], "reward")
+                self.log("lengths", self.T[i], "length")
                 self.log("episode ends", self.frames_done)
 
                 for key, yaxis in self.log_info:
-                    self.log(key, info[i][key], yaxis, "episode", self.episodes_done)
-
-        return self._sample
-
-    def _iteration(self):
-        # triggers one step in environment.
-        self.sample(trigger=True)
+                    self.log(key, self.info[i][key], yaxis)
+        return storage
 
     def hyperparameters(self):
-        return {"timer": self.timer,
-                "num_envs": self.env.num_envs if self._initialized else f"{self._threads} threads"
-        }
+        return {"num_envs": self.env.num_envs}
 
     @property
     def fps(self):
@@ -80,6 +59,7 @@ class Runner(Interactor):
         Returns fps for this runner.
         output: float
         """
+        if self.system.wallclock() == 0: return "Unknown"
         return self.frames_done / self.system.wallclock()
 
     # interface functions ----------------------------------------------------------------
@@ -94,4 +74,4 @@ class Runner(Interactor):
             self.episodes_done = pickle.load(f)
 
     def __repr__(self):
-        return f"Makes one step in {self._threads} parallel environments each {self.timer} iteration using <{self.policy.name}> policy"
+        return f"Makes steps in {self.env.num_envs} parallel environments"

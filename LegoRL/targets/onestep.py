@@ -1,27 +1,23 @@
-from LegoRL.representations.representation import Which
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.reference import Reference
+
+import torch
 
 class OneStep(RLmodule):
     """
-    Calculates target as r + V(s')
-    
-    Args:
-        value - RLmodule with "V" method
-
-    Provides: returns
+    One step value estimation
+    V = r + gamma * V
     """
-    def __init__(self, evaluator, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        self.evaluator = Reference(evaluator) 
-    
-    def returns(self, storage):
+    def __call__(self, evaluator, next_states, rewards, discounts, *args, **kwargs):
         '''
-        input: Storage
+        input: evaluator - callable, returning V
+        input: State
+        input: Reward
+        input: Discount
         output: V
         '''
-        return self.evaluator.V(storage, Which.next).one_step(storage.rewards, storage.discounts)
-        
+        with torch.no_grad():
+            next_V = evaluator.V(next_states)
+            return next_V.one_step(rewards, discounts)
+
     def __repr__(self):
-        return f"Calculates one-step TD target using <{self.evaluator.name}> as next state estimator"
+        return f"Returns one-step approximation"

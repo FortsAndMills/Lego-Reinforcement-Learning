@@ -43,7 +43,22 @@ def torch_index(data, index):
     data = data.rename(None)
     return data[index].refine_names(*names)
 
+def torch_set_index(data, index, value):
+    names = data.names
+    data = data.rename(None)
+    data[index] = value
+    return data.refine_names(*names)
+
 def torch_min(t1, t2):
     assert t1.names == t2.names
     names = t1.names
     return torch.min(t1.rename(None), t2.rename(None)).refine_names(*names)
+
+def torch_max(t1, t2):
+    assert t1.names == t2.names
+    names = t1.names
+    return torch.max(t1.rename(None), t2.rename(None)).refine_names(*names)
+
+def torch_split(t, spl, dim):
+    dim_index = t.names.index(dim)
+    return torch.split(t, spl, dim=dim_index)

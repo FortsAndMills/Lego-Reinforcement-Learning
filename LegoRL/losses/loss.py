@@ -1,42 +1,36 @@
 from LegoRL.core.RLmodule import RLmodule
-from LegoRL.core.reference import Reference
-from LegoRL.core.cache import storage_cached
 
 class Loss(RLmodule):
     """
     Common interface for loss functions
-
-    Args:
-        sampler - RLmodule with "sample" property
     
     Provides: loss, batch_loss
     """
-    def __init__(self, sampler):
-        super().__init__()
-        self.sampler = Reference(sampler)
+    def __init__(self, par, weight=1):
+        super().__init__(par)
+        self.weight = weight
 
-    @storage_cached("loss")
-    def batch_loss(self, storage):
+    def batch_loss(self, *args, **kwargs):
         '''
         Computes loss for batch
-        input: Storage
-        output: Tensor, (*batch_shape)
+        output: Loss
         '''
         raise NotImplementedError()
     
-    def loss(self):
+    def __call__(self, *args, weights=None, **kwargs):
         '''
         Calculates loss for batch from sampler
         output: Tensor, scalar.
         '''
-        batch = self.sampler.sample(trigger=True)
-        if batch is None:
-            self.debug("no batch is found, loss is None.")
-            return
+        self.last_batch_loss = self.batch_loss(*args, **kwargs)
+        if weights is None:
+            loss = self.last_batch_loss.tensor.mean()
+        else:
+            loss = (self.last_batch_loss * weights).tensor.mean()
 
-        self.debug("starts loss calculation.", open=True)
-        self.batch_loss(batch)
-        self.debug("finished loss calculation.", close=True)
+        loss = self.weight * loss
+        self.log(self.name, loss.detach().cpu().numpy(), f"{self.name} loss")
+        return loss
 
-        # averaging loss (there might be weights in the batch)      
-        return batch.average(self.name + " loss")
+    def hyperparameters(self):
+        return {"weight": self.weight}

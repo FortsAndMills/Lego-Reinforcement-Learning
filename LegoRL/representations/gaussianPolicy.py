@@ -1,10 +1,10 @@
-from LegoRL.representations.representation import Representation
+from LegoRL.representations.policy import Policy
 
 import torch
 import torch.nn.functional as F
-from torch.distributions import Normal
+from torch.distributions import MultivariateNormal
 
-class GaussianPolicy(Representation):
+class GaussianPolicy(Policy):
     '''
     FloatTensor representing gaussian policy, (*batch_shape x 2 x *action_shape)
     '''
@@ -15,23 +15,26 @@ class GaussianPolicy(Representation):
         output: torch.Normal
         '''
         # PyTorch NamedTensor issues again...
-        mu = F.tanh(self.tensor.align_to("musigma", ...)[0].rename(None))
+        mu = torch.tanh(self.tensor.align_to("musigma", ...)[0].rename(None))
         sigma = F.softplus(self.tensor.align_to("musigma", ...)[1].rename(None))
         
-        return Normal(mu, sigma)
+        return MultivariateNormal(mu, torch.diag_embed(sigma))
 
-    # TODO
-    def log_prob(self, actions):
-        component_prob = self.distribution.log_prob(actions)
-        return component_prob.sum(-1)
+    # def log_prob(self, actions):
+    #     '''
+    #     input: Action
+    #     output: FloatTensor
+    #     '''
+    #     #NamedTensors issue
+    #     component_prob = self.distribution.log_prob(actions.tensor.rename(None))
+    #     return component_prob
 
-    # TODO
-    def entropy(self):
-        component_entr = self.distribution.entropy()
-        return component_entr.sum(-1)
-
-    def __getattr__(self, name):
-        return getattr(self.distribution, name)
+    # def entropy(self):
+    #     '''
+    #     output: FloatTensor
+    #     '''
+    #     component_entr = self.distribution.entropy()
+    #     return component_entr
     
     @classmethod
     def rshape(cls):

@@ -1,25 +1,16 @@
 from LegoRL.losses.loss import Loss
-from LegoRL.core.cache import storage_cached
-from LegoRL.core.reference import Reference
 
 class DynamicsLoss(Loss):
     """
-    Loss for dynamics models (aka curiosity)
-    
-    Args:
-        sampler - RLmodule with "sample" method
-        model - RLmodule with "curiosity" method
-
-    Provides: loss, batch_loss
+    Loss for dynamics models
     """
-    def __init__(self, sampler, model):
-        super().__init__(sampler=sampler)        
-        self.sampler = Reference(sampler)
-        self.model = Reference(model)
-
-    @storage_cached("loss")
-    def batch_loss(self, storage):
-        return self.model.curiosity(storage)
+    def batch_loss(self, prediction, target, *args, **kwargs):
+        '''
+        input: prediction - State, Action or Embedding
+        input: target - State, Action or Embedding
+        output: Loss
+        '''
+        return prediction.compare(target.detach())
         
     def __repr__(self):
-        return f"Calculates loss for <{self.sampler.name}> using samples from <{self.sampler.name}>"
+        return f"Calculates loss"

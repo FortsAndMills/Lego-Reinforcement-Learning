@@ -56,14 +56,14 @@ def NoisyLinearRT(std_init=0.4):
             
             self.n_params = out_features
 
-            self.sigmas = nn.Parameter(torch.FloatTensor(out_features).fill_(std_init))
-            self.register_buffer("epsilon", torch.zeros(out_features))
+            self.sigmas = nn.Parameter(torch.FloatTensor(out_features).fill_(std_init), requires_grad=True)
+            self.register_buffer("epsilon", torch.zeros(out_features), )
         
         def forward(self, x):
             x = super().forward(x)
             if self.training:
-                torch.randn(self.epsilon.size(), out=self.epsilon)
-                x = x + self.sigmas * self.epsilon
+                #torch.randn(self.epsilon.size(), out=self.epsilon)
+                x = x + self.sigmas * torch.randn(self.epsilon.size(), device=x.device)
             
             return x
         

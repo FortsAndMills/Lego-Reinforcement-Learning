@@ -1,23 +1,14 @@
 TODO:
-- [bug]: frames are empty, no videos?
 - [add]: nn.init?
 - [add]: multi-reward support
 - [add]: recurrent network support
-- [bug]: What about train-eval modes?
+- [add]: random seed
+- [add]: What about train-eval modes?
 - [infra]: Visualize Q(s, a) for Q-learning. Text on replays? what is the reward after all?
 - [infra]: Episode plots: Q spread, Monte-Carlo V, V.
 - [infra]: check plotly plotting. Alternative plots smoothing? With dispersion, min and max?
 - [optimization]: test vectorized work with SumTree
-- [add]: DDPG
-- [tests]: Pendulum-v0
-- [tests]: Continuous Mountain Car
-- [tests]: Several runners tests
-- [infra]: graphviz scheme visualisation?
-- [infra]: in parallel environments, draw several reward lines?
-- [add]: SAC
-- [add]: world models
 - [add]: multi-gamma support
-- [add]: TD3
 - [add]: several-envs-per-core test
 - [add]: CEM
 - [add]: decorrelator for timer-based environments

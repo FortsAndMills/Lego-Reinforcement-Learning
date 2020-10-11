@@ -1,6 +1,4 @@
-from LegoRL.representations.representation import Representation, Which
-from LegoRL.buffers.transition import Transition
-from LegoRL.representations.standard import State, Action, Reward, Discount
+from LegoRL.representations.representation import Representation
 
 import numpy as np
 from LegoRL.utils.namedTensorsUtils import torch_stack
@@ -24,136 +22,91 @@ def stack(to_stack):
     return np.array(to_stack)
 
 class Storage(dict):
-    """
-    Main storage class of the framework.
-    Keys:
-        states - State, (batch_size x *observation_shape)
-        actions - Action, (batch_size x *action_shape)
-        rewards - Reward, (batch_size x *reward_shape)
-        next_states - State, (batch_size x *observation_shape)
-        discounts - Discount, (batch_size x *reward_shape)
-
-    Other keys store additional information.
-    They are also used as cache for many modules (e.g. forward passes through networks).
-    It is used for recording (e.g. values of q-function) and training (e.g. log_probs of policy).
-    """ 
+    '''
+    Dictionary of representations.
+    '''
     @classmethod
-    def from_list(cls, transitions):      
-        """
-        Creates Storage from list of Transition
-        input: transitions - list of Transition
+    def from_list(cls, storages):
+        '''
+        Stacks all tensors in list of storages along "timesteps" axis
+        input: storages - list of Storage
         output: Storage
-        """
-        states, actions, rewards, next_states, discounts = zip(*transitions)
-        return cls(
-            states = states, 
-            actions = actions,
-            rewards = rewards,
-            next_states = next_states,
-            discounts = discounts
-        )
-
-    def transitions(self):        
-        """
-        Generator for all transitions in this storage.
-        All additional information stored (log_probs, q-values, etc.) will not be yielded
-        yields: Transition
-        """
-        for s, a, r, ns, d in zip(self.states.numpy, self.actions.numpy, self.rewards.numpy, self.next_states.numpy, self.discounts.numpy):
-            yield Transition(s, a, r, ns, d)
-
-    def crop_states(self, which):
         '''
-        Returns subset of states corresponding to marker
-        input: which - Which marker:
-            current - states
-            next - next_states
-            last - next_states
-            all - both
-        output: Representation
+        return Storage({key: stack([storage[key] for storage in storages]) 
+                        for key in storages[0].keys()})
+
+    def types(self):
         '''
-        if which is Which.current:
-            return self.states
-        if which is Which.next:
-            return self.next_states
-        if which is Which.last:
-            return self.next_states
-        if which is Which.all:
-            return stack([self.states, self.next_states])
-        raise Exception("Error: 'which' marker is None?")
+        Returns dict of which types are used in this storage
+        output: dict <str, cls>
+        '''
+        return {name: type(repr) for name, repr in self.items()}
 
-    def average(self, name):        
-        """
-        Returns average (weighted if weights are provided) loss for batch of losses.
-        input: name - name of loss to average, str
-        output: scalar (PyTorch) - average loss
-        """
-        loss_b = self[name]
-        assert loss_b.tensor.shape == self.rewards.tensor.shape, "Error! Batch loss has wrong shape!"
-        
-        if "weights" in self:
-            assert loss_b.tensor.shape == self.weights.tensor.shape, "Error! Weights do not correspond to loss shape!"
-            return (loss_b.tensor * self.weights.tensor).sum()
-            
-        return loss_b.tensor.mean()
+    def transitions(self):
+        '''
+        Iterates over single transitions in this storage
+        yield: Storage
+        '''
+        for data in zip(*self.values()):
+            yield {name: repr for name, repr in zip(self.keys(), data)}
 
-    def __getitem__(self, key):  
-        """Converts data to representations for standard keys."""
-        value = super().__getitem__(key)
-        if key in {"states", "next_states", "all_states"} and not isinstance(value, State):
-            self[key] = value = self.mdp[State](value)
-        if key == "actions" and not isinstance(value, Action):
-            self[key] = value = self.mdp[Action](value)
-        if key == "rewards" and not isinstance(value, Reward):
-            self[key] = value = self.mdp[Reward](value)
-        if key == "discounts" and not isinstance(value, Discount):
-            self[key] = value = self.mdp[Discount](value)
-        return value
+    def batch(self, indices):
+        '''
+        input: indices - list of ints
+        output: Storage
+        '''
+        return Storage({key: data.batch(indices) for key, data in self.items()})
 
-    # TODO: think
-    def from_full_rollout(self, data):
-        return data.batch(self.indices)
+    # def rename(self, key1, key2):
+    #     '''
+    #     Prevents from modifying keys of storage
+    #     '''
+    #     assert key1 in self.keys(), "Error: key not found"
+    #     assert key2 not in self.keys(), "Error: No, please don't do this"
+    #     super().__setitem__(key2, self[key1])
+    #     del self[key1]
 
-    # TODO: think
-    @property
-    def storage_type(self):
-        return "storage"
-
-    # interface functions ----------------------------------------------------------------
-    @property
-    def batch_size(self):    
-        """
-        Returns the size of batch dimension
+    # interface----------------------------------------------------------------
+    def total_size(self):
+        '''
+        Returns number of transitions stored
         output: int
-        """
-        return self.states.batch_size
+        '''
+        return next(iter(self.values())).total_size
 
-    @property
-    def additional_keys(self):  
-        """
-        Returns all keys with additional information
-        output: set of strings
-        """
-        standard_keys = {"states", "actions", "rewards", "next_states", "discounts"}
-        return self.keys() - standard_keys
-
-    def __len__(self):          
-        """
-        Returns number of transitions stored in batch
-        output: int
-        """
-        return self.batch_size
-
-    def __getattr__(self, key):
-        if key in self.keys(): return self[key]
+    def __getattr__(self, attr):
+        '''
+        Allows access to items like to attributes
+        '''
+        if attr in self.keys():
+            return self[attr]
         raise AttributeError()
 
-    def __setattr__(self, key, value):
-        self[key] = value
+    def __setattr__(self, attr, val):
+        '''
+        Allows adding items like attributes
+        '''
+        self[attr] = val
 
-    @classmethod
-    def _default_name(cls):
-        return "Storage"
+    def __getitem__(self, attrs):
+        '''
+        Allows access to sub storage if a tuple of keys is given as input key
+        output then is Storage
+        '''
+        if isinstance(attrs, tuple):
+            return Storage({name: self[name] for name in attrs})
+        return super().__getitem__(attrs)
 
-    def __repr__(self):
-        return f"Batch of size {self.batch_size}. Additional information stored: {self.additional_keys}"
+    def __setitem__(self, attr, val):
+        '''
+        Prevents from modifying keys of storage
+        '''
+        assert not attr in self.keys(), "Error: no, please don't do this"
+        super().__setitem__(attr, val)
+
+    def rewrite(self, attr, val):
+        '''
+        If you want to update value in storage, explicitly call this function
+        '''
+        assert attr in self.keys()
+        super().__setitem__(attr, val)
