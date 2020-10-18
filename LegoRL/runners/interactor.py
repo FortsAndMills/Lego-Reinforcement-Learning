@@ -127,7 +127,7 @@ class Interactor(RLmodule):
 
             if store_frames:
                 storage.update(frames = frames)    
-                frames = self.env.render(mode = 'rgb_array')
+                frames = self.env.render(mode = 'rgb_array').copy()
 
             rollout.append(storage)
             
