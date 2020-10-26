@@ -17,3 +17,5 @@
 Also pushed initial commit for [theory book](https://github.com/FortsAndMills/RL-Theory-book) (rus): intro chapters, evolutionary algorithms, dyn. programming basics, TD-learning basics, DQN, DQN+modifications. Hoping to keep up with MSU RL course... 
 
 **18/10/20** - [Theory book](https://github.com/FortsAndMills/RL-Theory-book): added Distributional RL, ch. 4.3 (seems like now the hardest part is done =D). Initiated Demo Project 1: Mario. Let's try again, now with fixed oracle (no negative penalty for moving left) and bugfixed reward function. More details [here](https://github.com/FortsAndMills/Lego-Reinforcement-Learning/tree/master/Demo%20Projects).
+
+**26/10/20** - [Theory book](https://github.com/FortsAndMills/RL-Theory-book): added Policy Gradient chapter 5.1, 5.2. Long pit in Mario still indefeated, discount factor = 0.99 seems to be unappropriate for fast training :(
