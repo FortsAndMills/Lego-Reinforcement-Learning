@@ -19,7 +19,7 @@ class MDPconfig():
         USE_CUDA = torch.cuda.is_available()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.FloatTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).float().cuda() if USE_CUDA else torch.tensor(*args, **kwargs).float()
-        self.LongTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).cuda() if USE_CUDA else torch.tensor(*args, **kwargs)
+        self.LongTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).long().cuda() if USE_CUDA else torch.tensor(*args, **kwargs).long()
         self.BoolTensor = lambda *args, **kwargs: torch.tensor(*args, **kwargs).cuda() if USE_CUDA else torch.tensor(*args, **kwargs)
         
         self.gamma = gamma

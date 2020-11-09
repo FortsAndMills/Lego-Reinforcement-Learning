@@ -4,3 +4,11 @@
 *.pyc
 
 LegoRL/tests/__pycache__/
+
+Demo Projects/models/
+
+Demo Projects/Pyramids/
+
+Demo Projects/Walker/
+
+Demo Projects/WalkerNoServer/

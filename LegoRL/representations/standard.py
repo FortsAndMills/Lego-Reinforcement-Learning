@@ -60,6 +60,9 @@ class Reward(Representation):
     def rnames(cls):
         return tuple()
 
+    def compare(self, other):
+       return self.mdp["Loss"]((self.tensor - other.tensor)**2)
+
     @classmethod
     def _default_name(cls):   
         return "Reward Representation"

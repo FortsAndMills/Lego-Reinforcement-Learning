@@ -21,7 +21,7 @@ class RolloutCollector(RLmodule):
         """
         Adds transitions from runner to rollout and creates a sample if desired length is reached.
         """
-        self._rollout.append(storage)        
+        self._rollout.append(storage)
         assert len(self._rollout) <= self.rollout_length        
         
         if len(self._rollout) == self.rollout_length:

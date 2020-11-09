@@ -11,8 +11,11 @@ def stack(to_stack):
     '''
     # list of representations case
     if isinstance(to_stack[0], Representation):
-        tensor = torch_stack([r.tensor for r in to_stack], 0, "timesteps")
-        return type(to_stack[0])(tensor)
+        if hasattr(to_stack, "tensor"):
+            data = torch_stack([r.tensor for r in to_stack], 0, "timesteps")
+        else:
+            data = np.stack([r.numpy for r in to_stack])
+        return type(to_stack[0])(data)
     
     # list of numpy arrays case
     if isinstance(to_stack[0], np.ndarray):
@@ -67,6 +70,10 @@ class Storage(dict):
     #     del self[key1]
 
     # interface----------------------------------------------------------------
+    def remove_from_gpu(self):
+        for data in self.values():
+            data.remove_from_gpu()
+
     def total_size(self):
         '''
         Returns number of transitions stored

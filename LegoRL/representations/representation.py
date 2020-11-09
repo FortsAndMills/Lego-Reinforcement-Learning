@@ -123,6 +123,12 @@ class Representation():
         self._tensor = data.refine_names(*full_name)
         if hasattr(self, "_numpy"):
             del self._numpy
+
+    def remove_from_gpu(self):
+        if hasattr(self, "_tensor"):
+            getattr(self, "numpy")
+            assert not self._tensor.requires_grad
+            del self._tensor
     
     # these two methods define what are dimensions of tensor and what are names.
     @classmethod
@@ -246,7 +252,7 @@ class Representation():
             else:
                 return type(self)(self.numpy * other)
         elif isinstance(other, Representation):
-            return type(self)(self.tensor * other.tensor)
+            return type(self)(self.tensor * other.tensor.align_as(self.tensor))
         else:
             return type(self)(self.tensor * other)
         return self
@@ -261,7 +267,7 @@ class Representation():
             else:
                 return type(self)(self.numpy + other)
         elif isinstance(other, Representation):
-            return type(self)(self.tensor + other.tensor)
+            return type(self)(self.tensor + other.tensor.align_as(self.tensor))
         else:
             return type(self)(self.tensor + other)
         return self
@@ -276,7 +282,7 @@ class Representation():
             else:
                 return type(self)(self.numpy - other)
         elif isinstance(other, Representation):
-            return type(self)(self.tensor - other.tensor)
+            return type(self)(self.tensor - other.tensor.align_as(self.tensor))
         else:
             return type(self)(self.tensor - other)
         return self

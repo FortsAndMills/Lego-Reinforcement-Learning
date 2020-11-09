@@ -35,7 +35,7 @@ class GAE(RLmodule):
                 advantage = next_values.one_step(rewards[step], discounts[step]).subtract_v(values[step])
                 next_values = values[step]
                 
-                gae = advantage + discounts[step] * self.tau * gae
+                gae = advantage + gae * discounts[step] * self.tau
                 returns.append(gae)
         return stack(returns[::-1])
     
