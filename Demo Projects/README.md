@@ -30,8 +30,4 @@ Rendering is still an issue, but reward indicates that it worked.
 
 # Project 2.2: Bipedal Walker
 
-**Algorithm**: TD3, ~13 hours, ~2M frames, ~2K games played;
-
-Rendering is still an issue, but reward indicates that it worked.
-
 ![](https://github.com/FortsAndMills/Lego-Reinforcement-Learning/blob/master/Demo%20Projects/results/BipedalWalker.gif)
