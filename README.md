@@ -9,3 +9,5 @@ Also pushed initial commit for [theory book](https://github.com/FortsAndMills/RL
 **26/10/20** - [Theory book](https://github.com/FortsAndMills/RL-Theory-book): added Policy Gradient chapter 5.1, 5.2. Long pit in Mario still indefeated, discount factor = 0.99 seems to be unappropriate for fast training :(
 
 **12/11/20** - [Theory book](https://github.com/FortsAndMills/RL-Theory-book): added TD-lambda, GAE, TRPO and PPO ch. 3.5 and 5.3. Second [project on continuous control](https://github.com/FortsAndMills/Lego-Reinforcement-Learning/blob/master/Demo%20Projects/README.md#project-21-ant-pybullet): TD3 works on PyBullet Ant and Bipedal Walker from gym. SAC fails on Humanoid, probably there are more tricks required. 
+
+**04/12/20** - Chapters 6 (DDPG, TD3, SAC) and 7 (Bandits, MCTS, LQR) for [theory book](https://github.com/FortsAndMills/RL-Theory-book), nearly finished (ch.8 on advanced topics can be optional). Prioritization experiment failed; gradient explosion. Having... philosophy issues.
